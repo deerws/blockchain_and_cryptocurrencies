@@ -37,19 +37,24 @@ DEPOSIT_TOPIC = (
 )
 
 AAVE_V2_START_BLOCK = 11_500_000
-BLOCK_CHUNK_SIZE = 10_000
+BLOCK_CHUNK_SIZE = 100_000
+PAGE_SIZE = 1_000
 
 
 def _parse_user_from_log(log: dict) -> str | None:
-    """Extract the 'user' (borrower/depositor) from a Borrow or Deposit log.
+    """Extract the borrower address from a Borrow event log (Etherscan format).
 
-    Borrow event indexed fields: reserve, onBehalfOf, user  (topic3 = user)
-    Deposit event indexed fields: reserve, onBehalfOf, user (topic3 = user)
+    Borrow(address indexed reserve, address user, address indexed onBehalfOf,
+           uint256 amount, uint256 borrowRateMode, uint256 borrowRate,
+           uint16 indexed referral)
+    → topic1=reserve, topic2=onBehalfOf (borrower), topic3=referral
     """
     topics = log.get("topics", [])
-    if len(topics) < 4:
+    if len(topics) < 3:
         return None
-    raw = topics[3].hex() if hasattr(topics[3], "hex") else topics[3]
+    raw = topics[2]  # onBehalfOf is the actual borrower
+    if hasattr(raw, "hex"):
+        raw = raw.hex()
     address = "0x" + raw[-40:]
     return Web3.to_checksum_address(address)
 
@@ -60,7 +65,7 @@ def collect_borrowers(
     end_block: int,
     chunk_size: int = BLOCK_CHUNK_SIZE,
 ) -> set[str]:
-    """Return all unique borrower addresses that made at least one Borrow call."""
+    """Return all unique borrower addresses via Etherscan Logs API."""
     borrowers: set[str] = set()
     current = start_block
 
@@ -68,23 +73,36 @@ def collect_borrowers(
         chunk_end = min(current + chunk_size, end_block)
         logger.info(f"Scanning Borrow events: blocks {current:,} → {chunk_end:,}")
 
-        try:
-            logs = client.get_logs(
-                address=AAVE_V2_LENDING_POOL,
-                topics=[BORROW_TOPIC],
-                from_block=current,
-                to_block=chunk_end,
-            )
+        page = 1
+        while True:
+            try:
+                logs = client.get_event_logs(
+                    address=AAVE_V2_LENDING_POOL,
+                    topic0=BORROW_TOPIC,
+                    from_block=current,
+                    to_block=chunk_end,
+                    page=page,
+                    offset=PAGE_SIZE,
+                )
+            except Exception as exc:
+                logger.error(f"  Page {page} failed: {exc}")
+                time.sleep(3)
+                break
+
             for log in logs:
                 user = _parse_user_from_log(log)
                 if user:
                     borrowers.add(user)
-        except Exception as exc:
-            logger.error(f"Failed chunk {current}–{chunk_end}: {exc}")
-            time.sleep(5)
+
+            logger.info(f"  Page {page}: {len(logs)} borrow events | running total: {len(borrowers):,}")
+
+            if len(logs) < PAGE_SIZE:
+                break
+            page += 1
+            time.sleep(0.25)
 
         current = chunk_end
-        time.sleep(0.2)
+        time.sleep(0.25)
 
     logger.info(f"Total unique borrowers found: {len(borrowers):,}")
     return borrowers

@@ -26,7 +26,8 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # ── Constants ───────────────────────────────────────────────────────────────
-ETHERSCAN_BASE_URL = "https://api.etherscan.io/api"
+ETHERSCAN_BASE_URL = "https://api.etherscan.io/v2/api"
+ETHERSCAN_CHAIN_ID = 1  # Ethereum mainnet
 DEFAULT_TIMEOUT = 30  # seconds
 
 
@@ -68,8 +69,9 @@ class EthereumClient:
         retry=retry_if_exception_type(requests.RequestException),
     )
     def _etherscan_call(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Make a request to Etherscan with retry logic."""
+        """Make a request to Etherscan V2 API with retry logic."""
         params["apikey"] = self.etherscan_api_key
+        params["chainid"] = ETHERSCAN_CHAIN_ID
         response = requests.get(
             ETHERSCAN_BASE_URL, params=params, timeout=DEFAULT_TIMEOUT
         )
@@ -132,6 +134,35 @@ class EthereumClient:
                 "startblock": start_block,
                 "endblock": end_block,
                 "sort": "asc",
+            }
+        )
+        result = data.get("result", [])
+        return result if isinstance(result, list) else []
+
+    def get_event_logs(
+        self,
+        address: str,
+        topic0: str,
+        from_block: int,
+        to_block: int,
+        page: int = 1,
+        offset: int = 1000,
+    ) -> list[dict[str, Any]]:
+        """Fetch event logs via Etherscan Logs API (supports large block ranges).
+
+        Unlike eth_getLogs via Alchemy free tier (10-block limit), Etherscan's
+        logs endpoint supports ranges of ~100k blocks and paginates results.
+        """
+        data = self._etherscan_call(
+            {
+                "module": "logs",
+                "action": "getLogs",
+                "address": address,
+                "topic0": topic0,
+                "fromBlock": from_block,
+                "toBlock": to_block,
+                "page": page,
+                "offset": offset,
             }
         )
         result = data.get("result", [])

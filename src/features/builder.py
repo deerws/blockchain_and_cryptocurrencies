@@ -275,7 +275,6 @@ def _temporal_features(txs: pd.DataFrame) -> dict:
     # Monthly activity
     active_months = int(ts_sorted.dt.to_period("M").nunique())
     if active_months > 1 and wallet_age_days > 0:
-        months_span = wallet_age_days / 30.0
         monthly_counts = ts_sorted.dt.to_period("M").value_counts()
         activity_regularity = float(monthly_counts.std() / monthly_counts.mean()) if monthly_counts.mean() > 0 else 0.0
     else:
@@ -349,14 +348,20 @@ def build_feature_matrix(
     all_wallets = all_wallets.drop_duplicates(subset="wallet")
     logger.info(f"Building features for {len(all_wallets):,} wallets...")
 
+    # Pre-group by wallet once — avoids O(n*m) per-wallet filtering
+    txs_by_wallet = {w: g for w, g in normal_txs.groupby("wallet")}
+    token_by_wallet = {w: g for w, g in token_txs.groupby("wallet")}
+
     rows = []
-    for _, row in all_wallets.iterrows():
+    for i, (_, row) in enumerate(all_wallets.iterrows()):
         wallet = row["wallet"]
-        w_txs = normal_txs[normal_txs["wallet"] == wallet]
-        w_token_txs = token_txs[token_txs["wallet"] == wallet]
+        w_txs = txs_by_wallet.get(wallet, pd.DataFrame())
+        w_token_txs = token_by_wallet.get(wallet, pd.DataFrame())
         feats = build_features_for_wallet(wallet, w_txs, w_token_txs)
         feats["label"] = row["label"]
         rows.append(feats)
+        if (i + 1) % 500 == 0:
+            logger.info(f"  Progress: {i+1:,}/{len(all_wallets):,} wallets processed")
 
     df = pd.DataFrame(rows)
 
