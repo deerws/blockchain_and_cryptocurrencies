@@ -1,97 +1,102 @@
 # ChainScore
 
-> **On-chain credit scoring for DeFi wallets** — a research project on credit risk modeling using Ethereum behavioral data and machine learning.
+> **On-chain credit scoring for DeFi wallets** — a credit risk research project applying traditional scorecard methodology to Ethereum behavioral data.
 
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/status-research--prototype-orange.svg)]()
+[![Blockchain](https://img.shields.io/badge/blockchain-Ethereum-3C3C3D.svg)](https://ethereum.org/)
 
 ---
 
-## Motivation
+## What is ChainScore?
 
-The DeFi lending market holds over **USD 50 billion in total value locked**, yet every loan in this ecosystem requires overcollateralization (typically 150% or more). The reason: there is no equivalent of a credit bureau for blockchain wallets. Lenders cannot price risk, and creditworthy users are excluded from competitive borrowing.
+ChainScore generates a **0–1000 credit score** for Ethereum wallets by modeling the probability of default (PD) from on-chain behavioral data. It mirrors the methodology used in traditional consumer credit scoring — feature engineering, gradient boosting, calibration, and scorecard interpretation — applied to DeFi lending data from Aave V2.
 
-ChainScore explores whether on-chain behavioral data can be transformed into a meaningful credit score — using methods adapted from traditional credit risk modeling (FICO-style scorecards, gradient boosting, calibration analysis) applied to Ethereum wallet history.
-
-This repository documents the full pipeline: data collection, feature engineering, model training, evaluation, and deployment.
-
----
-
-## What this project demonstrates
-
-- **Credit risk methodology** — Probability of Default (PD) modeling with industry-standard metrics (KS, Gini, AUC, lift)
-- **Data engineering at scale** — collecting and processing millions of Ethereum transactions
-- **Feature engineering for behavioral data** — translating raw blockchain events into predictive signals
-- **Model interpretability** — SHAP values, feature importance analysis, calibration plots
-- **End-to-end deployment** — REST API + on-chain anchoring via Solidity smart contract
-
----
-
-## Repository structure
-
-```
-chainscore/
-├── data/                 Datasets (raw, processed, labeled)
-├── notebooks/            Exploratory analysis and experiments
-├── src/
-│   ├── data/             Ethereum data collection
-│   ├── features/         Feature engineering pipeline
-│   ├── models/           Training, evaluation, inference
-│   └── api/              FastAPI service
-├── contracts/            Solidity smart contract for score anchoring
-├── frontend/             React dashboard for demo
-└── tests/                Unit and integration tests
-```
+The system is delivered as a **B2B REST API**, enabling fintechs and digital banks to integrate on-chain credit intelligence into their lending products without building blockchain infrastructure themselves.
 
 ---
 
 ## Methodology
 
-### 1. Target definition
+### 1. Default label definition
 
-A wallet is labeled as **default = 1** if it experienced at least one liquidation event on Aave or Compound within 180 days of the observation window. Non-default wallets are those that maintained active borrowing positions during the same period without liquidation.
+A wallet is labeled **default = 1** if it experienced at least one liquidation event on Aave V2 within the observation window. Non-default wallets are those with active borrowing positions that were never liquidated.
 
-This proxy label has known limitations (discussed in the technical white paper) but is the closest available analog to credit default in traditional finance.
+Labels are sourced from **49,748 LiquidationCall events** on the Aave V2 LendingPool contract (blocks 11,500,000–25,000,000), yielding **10,809 unique defaulted borrowers**.
 
-### 2. Feature engineering
+### 2. Feature engineering — 45 features across 5 families
 
-Approximately 45 features grouped into five families:
-
-| Family | Examples |
-|---|---|
-| Transaction volume | Total ETH transferred, average tx size, frequency |
-| Counterparty graph | Number of unique counterparties, graph density, concentration |
-| Protocol diversity | Number of DeFi protocols used, breadth index |
-| Collateral behavior | Average collateral ratio, time-weighted ratio, volatility |
-| Temporal consistency | Wallet age, gap statistics, activity regularity |
+| Family | Count | Description |
+|---|---|---|
+| Transaction Volume | 9 | ETH flow, tx count, value statistics |
+| Counterparty Graph | 7 | Diversity, concentration, contract interaction ratio |
+| Protocol Diversity | 7 | DeFi breadth, Shannon entropy index, Aave/Compound/Uniswap flags |
+| Collateral Behavior | 8 | Aave deposit/borrow/repay/withdraw counts, repay-to-borrow ratio, gas patterns |
+| Temporal Consistency | 14 | Wallet age, activity regularity, dormancy periods, burst coefficient |
 
 ### 3. Models compared
 
-- **Baseline:** Logistic Regression (interpretable, traditional credit scoring)
-- **Advanced:** LightGBM (gradient boosting, current industry standard)
+| Model | Role |
+|---|---|
+| **Logistic Regression** | Interpretable baseline — FICO-style scorecard with log-odds coefficients |
+| **LightGBM** | Gradient boosting — production model with SHAP explainability |
 
-Both models are evaluated on the same hold-out set with identical metrics.
+Both models are probability-calibrated via Platt scaling to produce reliable PD estimates.
 
-### 4. Evaluation metrics
+### 4. Train / test split
 
-- **Discrimination:** ROC-AUC, KS statistic, Gini coefficient
-- **Calibration:** Reliability diagram, Brier score
-- **Business impact:** Lift curves, score distribution by class
-- **Robustness:** Cross-validation, temporal split validation
+Temporal split at block **17,000,000** (~April 2023) to prevent future data leakage — wallets with first activity before the cutoff go into training; those after go into testing. This mirrors production deployment constraints.
 
----
-
-## Results (placeholder — to be updated)
+### 5. Results (299-wallet MVP dataset)
 
 | Metric | Logistic Regression | LightGBM |
 |---|---|---|
-| ROC-AUC | TBD | TBD |
-| KS statistic | TBD | TBD |
-| Gini | TBD | TBD |
-| Brier score | TBD | TBD |
+| **ROC-AUC** | **0.613** | 0.588 |
+| **KS Statistic** | **0.300** | 0.233 |
+| **Gini Coefficient** | **0.227** | 0.176 |
+| Brier Score | 0.264 | **0.249** |
+| Lift @ Decile 2 | **1.33** | 1.17 |
 
-Detailed analysis in [notebooks/04_model_evaluation.ipynb](notebooks/04_model_evaluation.ipynb).
+> **Note:** LR outperforms LightGBM on this dataset size, consistent with credit risk literature — gradient boosting requires ≥ 1,000 labeled samples to surpass linear models. Results will improve as the dataset scales to the full 15,809 available wallets.
+
+---
+
+## Project structure
+
+```
+ChainScore/
+├── data/
+│   ├── raw/                        Raw Ethereum event logs and wallet samples
+│   └── processed/                  Labeled feature matrix (Parquet)
+├── notebooks/
+│   ├── 01_data_exploration.ipynb   Liquidation dataset analysis
+│   ├── 02_feature_engineering.ipynb Feature distributions and correlation analysis
+│   ├── 03_model_training.ipynb     Training pipeline with comparison
+│   └── 04_model_evaluation.ipynb   Full evaluation suite with all plots
+├── src/
+│   ├── data/
+│   │   ├── ethereum_client.py      Alchemy RPC + Etherscan API wrapper
+│   │   ├── liquidation_collector.py Aave V2 LiquidationCall event collector
+│   │   ├── cohort_collector.py     Non-default borrower sampler
+│   │   └── wallet_indexer.py       Transaction history indexer with checkpointing
+│   ├── features/
+│   │   ├── builder.py              45-feature pipeline
+│   │   └── protocol_registry.py    Known DeFi contract addresses
+│   ├── models/
+│   │   ├── train.py                Training pipeline (LR + LightGBM, calibration)
+│   │   ├── evaluate.py             KS, Gini, AUC, SHAP, lift, calibration plots
+│   │   ├── predict.py              Real-time wallet scoring
+│   │   └── scorecard.py            PD → 0–1000 score conversion
+│   └── api/
+│       ├── main.py                 FastAPI service
+│       └── schemas.py              Pydantic request/response schemas
+├── contracts/
+│   └── ChainScoreAnchor.sol        Solidity contract for on-chain score anchoring
+├── models/                         Trained model artifacts (generated locally)
+├── reports/figures/                Evaluation plots (generated locally)
+└── requirements.txt
+```
 
 ---
 
@@ -100,14 +105,14 @@ Detailed analysis in [notebooks/04_model_evaluation.ipynb](notebooks/04_model_ev
 ### Prerequisites
 
 - Python 3.11+
-- A free Alchemy API key ([alchemy.com](https://www.alchemy.com/))
-- A free Etherscan API key ([etherscan.io/apis](https://etherscan.io/apis))
+- Free [Alchemy API key](https://www.alchemy.com/) (Ethereum Mainnet)
+- Free [Etherscan API key](https://etherscan.io/apis)
 
 ### Installation
 
 ```bash
-git clone https://github.com/deerws/chainscore.git
-cd chainscore
+git clone https://github.com/deerws/ChainScore.git
+cd ChainScore
 
 python -m venv .venv
 source .venv/bin/activate
@@ -118,49 +123,71 @@ cp .env.example .env
 # Edit .env and add your API keys
 ```
 
-### Quick start
+### Run the full pipeline
 
 ```bash
-# 1. Collect raw data (~30 min for sample dataset)
-python -m src.data.liquidation_collector --limit 1000
+# 1. Collect liquidation events (Aave V2 default labels)
+python -m src.data.liquidation_collector
 
-# 2. Build features
+# 2. Sample non-default cohort
+python -m src.data.cohort_collector --max-wallets 5000
+
+# 3. Index wallet transaction histories
+python -m src.data.wallet_indexer \
+    --wallet-list data/raw/wallet_sample_balanced.json \
+    --output-dir  data/raw/wallets
+
+# 4. Build feature matrix
 python -m src.features.builder
 
-# 3. Train model
+# 5. Train models
 python -m src.models.train
 
-# 4. Evaluate
+# 6. Evaluate
 python -m src.models.evaluate
+
+# 7. Score a specific wallet
+python -m src.models.predict 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
+```
+
+### Run the API
+
+```bash
+uvicorn src.api.main:app --reload --port 8000
+# → POST http://localhost:8000/v1/score
+# → GET  http://localhost:8000/health
+```
+
+---
+
+## Smart contract
+
+`ChainScoreAnchor.sol` anchors score hashes on-chain (Sepolia testnet) for auditability. Lenders can verify a score was issued at a specific time without trusting the ChainScore server.
+
+```solidity
+// Verify a score commitment on-chain
+bool valid = anchor.verifyScore(wallet, score, validUntil, modelVersion);
 ```
 
 ---
 
 ## Roadmap
 
-- [x] **Phase 0** — Project scaffolding
-- [ ] **Phase 1** — Data engineering: collect liquidation events, build wallet dataset
-- [ ] **Phase 2** — Modeling: feature engineering, baseline + LightGBM, full evaluation
-- [ ] **Phase 3** — API + smart contract anchoring on Sepolia testnet
-- [ ] **Phase 4** — React dashboard for live demo
-
----
-
-## Tech stack
-
-**Data & ML:** Python, pandas, scikit-learn, LightGBM, SHAP
-**Blockchain:** web3.py, Alchemy, Etherscan API, Solidity
-**API:** FastAPI, Uvicorn
-**Frontend:** React, TypeScript
+- [x] **Phase 0** — Project scaffolding and repository structure
+- [x] **Phase 1** — Data engineering: 49,748 liquidation events, 15,809 labeled wallets
+- [x] **Phase 2** — Modeling: 45 features, LR + LightGBM, KS/Gini/AUC/SHAP evaluation
+- [ ] **Phase 3** — Scale dataset to 15,809 wallets and improve model metrics
+- [ ] **Phase 4** — Deploy API + anchor scores on Sepolia testnet
+- [ ] **Phase 5** — React dashboard for live demo
 
 ---
 
 ## About
 
-This project is part of my exploration of credit risk modeling and decentralized finance. It is not a production system. For inquiries about the methodology or potential collaboration:
+Built as a research project exploring the intersection of credit risk modeling and decentralized finance. The goal is to demonstrate that on-chain behavioral data contains meaningful credit signals — and that traditional scorecard methodology transfers well to the blockchain domain.
 
-**André Pinheiro Paes** — [paes.andre33@gmail.com](mailto:paes.andre33@gmail.com)
-[LinkedIn](https://br.linkedin.com/in/andrepinheiropaes) · [GitHub](https://github.com/deerws)
+**André Pinheiro Paes** — Computer Science, UFSC
+[LinkedIn](https://br.linkedin.com/in/andrepinheiropaes) · [GitHub](https://github.com/deerws) · [paes.andre33@gmail.com](mailto:paes.andre33@gmail.com)
 
 ---
 
