@@ -1,10 +1,10 @@
 # ChainScore
 
-> **On-chain credit scoring for DeFi wallets** — a credit risk research project applying traditional scorecard methodology to Ethereum behavioral data.
+> **On-chain credit scoring for DeFi wallets** — applying traditional credit risk methodology to Ethereum behavioral data.
 
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status](https://img.shields.io/badge/status-research--prototype-orange.svg)]()
+[![Status](https://img.shields.io/badge/status-active-brightgreen.svg)]()
 [![Blockchain](https://img.shields.io/badge/blockchain-Ethereum-3C3C3D.svg)](https://ethereum.org/)
 
 ---
@@ -69,15 +69,7 @@ ChainScore/
 ├── data/
 │   ├── raw/                        Raw Ethereum event logs and wallet samples
 │   └── processed/                  Labeled feature matrix (Parquet)
-├── deliverables/
-│   ├── chainscore_starter.zip      Course starter template
-│   ├── pd1/
-│   │   └── chainscore_blockchain_canvas.pdf   Project canvas (PD1)
-│   ├── pd2/
-│   │   ├── whitepaper_long_blockchain.pdf     Full whitepaper (PD2)
-│   │   └── whitepaper_short_blockchain.pdf    Executive summary (PD2)
-│   └── pd3/
-│       └── chainscore_pitch.pptx              Pitch deck (PD3)
+├── docs/                           Whitepapers, pitch deck, and project materials
 ├── notebooks/
 │   ├── 01_data_exploration.ipynb   Liquidation dataset analysis
 │   ├── 02_feature_engineering.ipynb Feature distributions and correlation analysis
@@ -193,9 +185,9 @@ bool valid = anchor.verifyScore(wallet, score, validUntil, modelVersion);
 
 ## About
 
-Built as a research project exploring the intersection of credit risk modeling and decentralized finance. The goal is to demonstrate that on-chain behavioral data contains meaningful credit signals — and that traditional scorecard methodology transfers well to the blockchain domain.
+I built ChainScore to explore whether on-chain behavioral data contains meaningful credit signals — and whether traditional scorecard methodology transfers well to the blockchain domain. The answer, even at small scale, is yes.
 
-**André Pinheiro Paes** — Computer Science, UFSC
+**André Pinheiro Paes**
 [LinkedIn](https://br.linkedin.com/in/andrepinheiropaes) · [GitHub](https://github.com/deerws) · [paes.andre33@gmail.com](mailto:paes.andre33@gmail.com)
 
 ---
