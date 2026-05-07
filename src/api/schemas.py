@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ScoreRequest(BaseModel):
@@ -36,6 +36,8 @@ class ShapFactor(BaseModel):
 
 
 class ScoreResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     wallet_address: str
     score: int = Field(..., ge=0, le=1000, description="ChainScore (0=highest risk, 1000=lowest risk)")
     risk_tier: Literal["very_low", "low", "medium", "high", "very_high"]
@@ -49,6 +51,8 @@ class ScoreResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     status: Literal["ok", "degraded"]
     model_loaded: bool
     ethereum_connected: bool
