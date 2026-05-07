@@ -75,12 +75,13 @@ def index_wallets(
     all_normal_txs: list[dict] = []
     all_token_txs: list[dict] = []
     last_call = 0.0
+    batch_num = 0
+    remaining = [w for w in wallets if w not in done]
+    total_to_index = len(remaining)
+    t_start = time.monotonic()
 
-    for i, wallet in enumerate(wallets):
-        if wallet in done:
-            continue
-
-        logger.info(f"[{i+1}/{len(wallets)}] Indexing {wallet}")
+    for idx, wallet in enumerate(remaining):
+        logger.info(f"[{len(done)+1}/{len(wallets)}] Indexing {wallet}")
 
         try:
             last_call = _throttle(last_call)
@@ -102,43 +103,72 @@ def index_wallets(
             time.sleep(2)
             continue
 
-        # Flush every 50 wallets to avoid data loss on interruption
-        if len(done) % 50 == 0:
-            _flush(all_normal_txs, all_token_txs, output_dir, append=True)
+        # Flush every 50 wallets — write a new batch file (no read-back)
+        indexed_so_far = idx + 1
+        if indexed_so_far % 50 == 0:
+            batch_num += 1
+            _flush_batch(all_normal_txs, all_token_txs, output_dir, batch_num)
             all_normal_txs.clear()
             all_token_txs.clear()
 
-        # Checkpoint
+            elapsed = time.monotonic() - t_start
+            rate = indexed_so_far / elapsed
+            eta_sec = (total_to_index - indexed_so_far) / rate if rate else 0
+            logger.info(
+                f"Progress: {indexed_so_far}/{total_to_index} new wallets "
+                f"({indexed_so_far/total_to_index*100:.1f}%) — "
+                f"ETA {eta_sec/60:.0f} min"
+            )
+
+        # Checkpoint after every wallet
         if checkpoint_path:
             with checkpoint_path.open("w") as f:
                 json.dump({"done": list(done)}, f)
 
-    # Final flush
+    # Final flush for remaining buffer
     if all_normal_txs or all_token_txs:
-        _flush(all_normal_txs, all_token_txs, output_dir, append=True)
+        batch_num += 1
+        _flush_batch(all_normal_txs, all_token_txs, output_dir, batch_num)
 
+    # Merge all batch files into the main parquets (single read per file, O(n) I/O)
+    logger.info("Merging batch files into main parquets...")
+    _merge_batches(output_dir)
     logger.info(f"Indexing complete. {len(done)} wallets indexed to {output_dir}")
 
 
-def _flush(
+def _flush_batch(
     normal_txs: list[dict],
     token_txs: list[dict],
     output_dir: Path,
-    append: bool = False,
+    batch_num: int,
 ) -> None:
-    """Write buffered transactions to Parquet, optionally appending to existing."""
+    """Write a batch of transactions to a numbered Parquet file (no read-back)."""
     for data, name in [(normal_txs, "normal_txs"), (token_txs, "token_txs")]:
         if not data:
             continue
-        df_new = pd.DataFrame(data)
-        out = output_dir / f"{name}.parquet"
-        if append and out.exists():
-            df_existing = pd.read_parquet(out)
-            df_combined = pd.concat([df_existing, df_new], ignore_index=True)
-            df_combined.to_parquet(out, index=False)
-        else:
-            df_new.to_parquet(out, index=False)
-        logger.info(f"  Flushed {len(df_new):,} rows → {out}")
+        df = pd.DataFrame(data)
+        out = output_dir / f"{name}_batch_{batch_num:04d}.parquet"
+        df.to_parquet(out, index=False)
+        logger.info(f"  Batch {batch_num}: {len(df):,} rows → {out.name}")
+
+
+def _merge_batches(output_dir: Path) -> None:
+    """Merge all batch files into the final normal_txs / token_txs parquets."""
+    for name in ["normal_txs", "token_txs"]:
+        batch_files = sorted(output_dir.glob(f"{name}_batch_*.parquet"))
+        if not batch_files:
+            continue
+        dfs: list[pd.DataFrame] = []
+        base = output_dir / f"{name}.parquet"
+        if base.exists():
+            dfs.append(pd.read_parquet(base))
+        for bf in batch_files:
+            dfs.append(pd.read_parquet(bf))
+        combined = pd.concat(dfs, ignore_index=True)
+        combined.to_parquet(base, index=False)
+        logger.info(f"Merged → {base.name}: {len(combined):,} rows total")
+        for bf in batch_files:
+            bf.unlink()
 
 
 def load_wallet_list(cohort_paths: list[Path]) -> list[str]:

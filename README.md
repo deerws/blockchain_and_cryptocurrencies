@@ -69,6 +69,15 @@ ChainScore/
 ├── data/
 │   ├── raw/                        Raw Ethereum event logs and wallet samples
 │   └── processed/                  Labeled feature matrix (Parquet)
+├── deliverables/
+│   ├── chainscore_starter.zip      Course starter template
+│   ├── pd1/
+│   │   └── chainscore_blockchain_canvas.pdf   Project canvas (PD1)
+│   ├── pd2/
+│   │   ├── whitepaper_long_blockchain.pdf     Full whitepaper (PD2)
+│   │   └── whitepaper_short_blockchain.pdf    Executive summary (PD2)
+│   └── pd3/
+│       └── chainscore_pitch.pptx              Pitch deck (PD3)
 ├── notebooks/
 │   ├── 01_data_exploration.ipynb   Liquidation dataset analysis
 │   ├── 02_feature_engineering.ipynb Feature distributions and correlation analysis
