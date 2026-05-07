@@ -102,8 +102,8 @@ def index_wallets(
             time.sleep(2)
             continue
 
-        # Flush every 200 wallets to avoid memory buildup
-        if len(done) % 200 == 0:
+        # Flush every 50 wallets to avoid data loss on interruption
+        if len(done) % 50 == 0:
             _flush(all_normal_txs, all_token_txs, output_dir, append=True)
             all_normal_txs.clear()
             all_token_txs.clear()
@@ -177,6 +177,10 @@ def main() -> None:
     parser.add_argument(
         "--limit", type=int, default=None, help="Only index first N wallets (testing)"
     )
+    parser.add_argument(
+        "--wallet-list", type=Path, default=None,
+        help="JSON file with pre-selected wallet addresses (overrides --cohorts + --limit)"
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -184,9 +188,16 @@ def main() -> None:
     )
 
     client = EthereumClient.from_env()
-    wallets = load_wallet_list(args.cohorts)
-    if args.limit:
-        wallets = wallets[: args.limit]
+
+    if args.wallet_list and args.wallet_list.exists():
+        import json
+        with args.wallet_list.open() as f:
+            wallets = json.load(f)
+        logger.info(f"Using pre-selected wallet list: {len(wallets):,} wallets")
+    else:
+        wallets = load_wallet_list(args.cohorts)
+        if args.limit:
+            wallets = wallets[: args.limit]
 
     index_wallets(
         client,

@@ -112,7 +112,7 @@ def _graph_features(txs: pd.DataFrame, wallet: str) -> dict:
     contract_interactions = int((has_input != "0x").sum())
     contract_ratio = contract_interactions / len(txs) if len(txs) else 0.0
 
-    self_tx = int((senders == w) & (receivers == w)).sum() if len(txs) else 0
+    self_tx = int(((senders == w) & (receivers == w)).sum()) if len(txs) else 0
     self_ratio = self_tx / len(txs) if len(txs) else 0.0
 
     return {
@@ -273,9 +273,10 @@ def _temporal_features(txs: pd.DataFrame) -> dict:
     recent_ratio = float((ts_sorted >= cutoff).sum() / len(ts_sorted))
 
     # Monthly activity
-    active_months = int(ts_sorted.dt.to_period("M").nunique())
+    ts_local = ts_sorted.dt.tz_localize(None)
+    active_months = int(ts_local.dt.to_period("M").nunique())
     if active_months > 1 and wallet_age_days > 0:
-        monthly_counts = ts_sorted.dt.to_period("M").value_counts()
+        monthly_counts = ts_local.dt.to_period("M").value_counts()
         activity_regularity = float(monthly_counts.std() / monthly_counts.mean()) if monthly_counts.mean() > 0 else 0.0
     else:
         activity_regularity = 0.0
@@ -346,7 +347,15 @@ def build_feature_matrix(
 
     all_wallets = pd.concat([defaults, non_defaults], ignore_index=True)
     all_wallets = all_wallets.drop_duplicates(subset="wallet")
-    logger.info(f"Building features for {len(all_wallets):,} wallets...")
+
+    # Only include wallets that have been indexed — wallets with no transaction
+    # data produce all-zero feature vectors that are uninformative for the model.
+    indexed = set(normal_txs["wallet"].unique()) | set(token_txs["wallet"].unique())
+    all_wallets = all_wallets[all_wallets["wallet"].isin(indexed)].reset_index(drop=True)
+    logger.info(
+        f"Indexed wallets with data: {len(all_wallets):,} "
+        f"(default={all_wallets['label'].sum()}, non-default={(all_wallets['label']==0).sum()})"
+    )
 
     # Pre-group by wallet once — avoids O(n*m) per-wallet filtering
     txs_by_wallet = {w: g for w, g in normal_txs.groupby("wallet")}

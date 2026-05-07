@@ -1,0 +1,18 @@
+{
+  "Logistic Regression": {
+    "roc_auc": 0.6133333333333334,
+    "ks_statistic": 0.3,
+    "gini": 0.2266666666666668,
+    "brier_score": 0.2634515116424506,
+    "lift_decile_1": 1.0,
+    "lift_decile_2": 1.3333333333333333
+  },
+  "LightGBM": {
+    "roc_auc": 0.5877777777777777,
+    "ks_statistic": 0.2333333333333334,
+    "gini": 0.17555555555555546,
+    "brier_score": 0.24848752100785518,
+    "lift_decile_1": 1.0,
+    "lift_decile_2": 1.1666666666666667
+  }
+}
