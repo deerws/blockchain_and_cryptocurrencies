@@ -24,6 +24,8 @@ import logging
 import pickle
 from pathlib import Path
 
+import warnings
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -186,27 +188,33 @@ def plot_shap_summary(
     X_test: pd.DataFrame,
     save_path: Path,
     max_display: int = 15,
+    shap_sample: int = 500,
 ) -> None:
     """SHAP beeswarm summary plot for the LightGBM model."""
     try:
-        # Extract the underlying LightGBM booster for SHAP
         inner = model
         if hasattr(model, "calibrated_classifiers_"):
             inner = model.calibrated_classifiers_[0].estimator
         elif hasattr(model, "named_steps"):
             inner = model.named_steps.get("classifier", model)
 
-        explainer = shap.TreeExplainer(inner)
-        shap_values = explainer.shap_values(X_test)
+        # Sample to keep computation fast on large test sets
+        X_shap = (
+            X_test.sample(shap_sample, random_state=42)
+            if len(X_test) > shap_sample
+            else X_test
+        )
 
-        # For binary classification, shap_values may be a list [neg_class, pos_class]
+        explainer = shap.TreeExplainer(inner)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="LightGBM binary classifier")
+            shap_values = explainer.shap_values(X_shap)
         if isinstance(shap_values, list):
             shap_values = shap_values[1]
 
-        fig, ax = plt.subplots(figsize=(10, 8))
         shap.summary_plot(
             shap_values,
-            X_test,
+            X_shap,
             max_display=max_display,
             show=False,
             plot_type="dot",
