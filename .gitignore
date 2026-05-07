@@ -21,14 +21,17 @@ htmlcov/
 .ipynb_checkpoints/
 *.ipynb_checkpoints
 
-# Data files (too big or sensitive)
-data/raw/*.json
+# Data files (too big or sensitive — regenerate via pipeline)
 data/raw/*.parquet
+data/raw/wallets/*.parquet
 data/processed/*.parquet
 data/labeled/*.parquet
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/labeled/.gitkeep
+
+# Indexer log (runtime artifact)
+data/raw/indexer.log
 
 # Models (large binary artifacts — not committed)
 models/*.pkl
