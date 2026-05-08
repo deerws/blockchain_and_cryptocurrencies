@@ -301,7 +301,7 @@ export default function Home() {
               <img 
                 src="/hero-bull.png" 
                 alt="ChainScore Bull - Wall Street meets Blockchain"
-                className="w-full h-auto dark:invert"
+                className="w-full h-auto mix-blend-multiply dark:mix-blend-normal dark:invert dark:brightness-90"
               />
             </div>
           </div>
