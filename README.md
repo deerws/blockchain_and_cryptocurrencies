@@ -37,15 +37,19 @@ The model's predicted probability of default (PD) is converted to a 0–1000 sca
 
 ---
 
-## Live demo
+## Dashboard
 
-The dashboard lets you score any Ethereum wallet in seconds:
+Institutional-style analyst interface built with Next.js — dark/light mode, live API integration, and a full credit report layout:
 
-```
-Score  →  Risk tier  →  PD estimate  →  SHAP factor breakdown  →  Analyst insights
-```
+- **Score gauge** — semicircle with color-coded risk bands
+- **KPI cards** — risk tier, PD estimate, score validity window
+- **SHAP chart** — horizontal bar chart showing which features pushed the score up or down
+- **Protocol exposure table** — Aave, Compound, Uniswap, MakerDAO, Lido
+- **Activity heatmap** — 90-day on-chain activity grid
+- **Transaction history** — 12-month line chart
+- **Risk assessment** — analyst-style narrative with bullet-point findings
 
-> *Screenshot coming — run locally to see the full UI (instructions below).*
+> *Screenshot coming — run locally with `bun run dev` to see the full UI.*
 
 ---
 
@@ -224,7 +228,7 @@ Swagger UI: [http://localhost:8000/docs](http://localhost:8000/docs)
 ```bash
 curl -s -X POST http://localhost:8000/v1/score \
   -H "Content-Type: application/json" \
-  -d '{"wallet_address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"}'
+  -d '{"wallet_address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "include_shap": true}'
 ```
 
 **Score multiple wallets (batch, up to 20)**
@@ -240,7 +244,7 @@ curl -s -X POST http://localhost:8000/v1/batch \
   }'
 ```
 
-Failed wallets are returned with an `error` field rather than aborting the batch.
+Failed wallets return an `error` field instead of aborting the whole batch. Repeated calls for the same wallet are served from a **30-minute in-memory cache** — zero extra Etherscan requests, ~50ms response time on cache hits.
 
 ### Run the frontend dashboard
 
@@ -262,7 +266,7 @@ Requires the API running on `http://localhost:8000`.
 | Data pipeline | Python · Etherscan API · Alchemy RPC · Pandas · PyArrow |
 | Modeling | Scikit-learn · LightGBM · SHAP · SciPy · Statsmodels |
 | API | FastAPI · Pydantic v2 · Uvicorn |
-| Frontend | Next.js 16 · TypeScript · Tailwind CSS v4 · Recharts |
+| Frontend | Next.js 16 · TypeScript · Tailwind CSS v4 · Recharts · Inter + JetBrains Mono |
 | Blockchain | Web3.py · Aave V2 LendingPool ABI |
 
 ---
@@ -283,14 +287,14 @@ bool valid = anchor.verifyScore(wallet, score, validUntil, modelVersion);
 - [x] **Phase 1** — Data engineering: 49,748 liquidation events, 15,809 labeled wallets
 - [x] **Phase 2** — Modeling: 45 features, LR + LightGBM, KS/Gini/AUC/SHAP evaluation
 - [x] **Phase 3** — REST API (single + batch scoring, Swagger); Next.js dashboard with dark mode, gauge, SHAP chart, analyst insights
-- [ ] **Phase 4** — Scale to 15,809 wallets and retrain — target ROC-AUC ≥ 0.72
+- [ ] **Phase 4** — Scale to 15,809 wallets and retrain — target ROC-AUC ≥ 0.72 *(indexing in progress)*
 - [ ] **Phase 5** — Deploy API + anchor scores on Sepolia testnet
 
 ---
 
 ## About
 
-I built ChainScore to explore whether on-chain behavioral data contains meaningful credit signals — and whether traditional scorecard methodology transfers well to the blockchain domain. The answer, even at small scale, is yes: a KS Statistic of 0.30 with no hyperparameter tuning and 299 training samples is a solid foundation.
+I've been interested in both credit risk and crypto for a while, and at some point the question became obvious: Aave borrowers have a full repayment history sitting on a public ledger — why isn't anyone turning that into a credit score? ChainScore is my attempt to answer that. The methodology is standard scorecard work (feature engineering, gradient boosting, Platt calibration, KS/Gini evaluation) applied to on-chain data instead of bank statements. The answer, even at small scale, is yes: a KS Statistic of 0.30 with no hyperparameter tuning and 299 training samples is a solid foundation.
 
 **André Pinheiro Paes** — Computer Science student at UFSC, interested in credit risk, financial markets, and AI.
 
