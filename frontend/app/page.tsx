@@ -299,9 +299,9 @@ export default function Home() {
             {/* Hero Illustration */}
             <div className="hidden lg:block w-64 xl:w-80 shrink-0">
               <img 
-                src="/hero-bull.jpg" 
+                src="/hero-bull.png" 
                 alt="ChainScore Bull - Wall Street meets Blockchain"
-                className="w-full h-auto rounded-lg opacity-90"
+                className="w-full h-auto dark:invert"
               />
             </div>
           </div>
