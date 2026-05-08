@@ -112,3 +112,4 @@ class HealthResponse(BaseModel):
     status: Literal["ok", "degraded"]
     model_loaded: bool
     ethereum_connected: bool
+    cached_wallets: int = Field(default=0, description="Wallets currently in the 30-min score cache")

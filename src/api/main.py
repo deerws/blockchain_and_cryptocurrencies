@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 
@@ -42,6 +43,25 @@ logger = logging.getLogger(__name__)
 _client: EthereumClient | None = None
 _predictor: ChainScorePredictor | None = None
 _ethereum_connected: bool = False
+
+# ── Score cache (in-memory, 30-min TTL) ───────────────────────────────────
+_CACHE_TTL = 1800  # seconds
+_score_cache: dict[str, tuple[ScoreResponse, float]] = {}  # key → (result, ts)
+
+
+def _cache_get(wallet: str) -> ScoreResponse | None:
+    key = wallet.lower()
+    entry = _score_cache.get(key)
+    if entry and time.monotonic() - entry[1] < _CACHE_TTL:
+        logger.info("Cache hit for %s", wallet)
+        return entry[0]
+    if entry:
+        del _score_cache[key]
+    return None
+
+
+def _cache_set(wallet: str, result: ScoreResponse) -> None:
+    _score_cache[wallet.lower()] = (result, time.monotonic())
 
 API_KEY_NAME = "X-API-Key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
@@ -159,10 +179,18 @@ async def health() -> HealthResponse:
         status="ok" if _ethereum_connected and _predictor is not None else "degraded",
         model_loaded=_predictor is not None,
         ethereum_connected=_ethereum_connected,
+        cached_wallets=len(_score_cache),
     )
 
 
 def _build_score_response(wallet: str, include_shap: bool) -> ScoreResponse:
+    cached = _cache_get(wallet)
+    if cached is not None:
+        # Re-use cached result; if caller doesn't want SHAP, strip factors
+        if not include_shap:
+            return cached.model_copy(update={"top_factors": []})
+        return cached
+
     if _predictor is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -174,10 +202,10 @@ def _build_score_response(wallet: str, include_shap: bool) -> ScoreResponse:
             detail="Ethereum client not connected. Check ALCHEMY_API_KEY.",
         )
 
-    result = _predictor.score_wallet(wallet, _client, use_shap=include_shap)
+    result = _predictor.score_wallet(wallet, _client, use_shap=True)
     valid_until = (datetime.utcnow() + timedelta(days=30)).strftime("%Y-%m-%d")
 
-    return ScoreResponse(
+    response = ScoreResponse(
         wallet_address=result.wallet_address,
         score=result.score,
         risk_tier=result.risk_tier,
@@ -193,6 +221,11 @@ def _build_score_response(wallet: str, include_shap: bool) -> ScoreResponse:
         model_version=result.model_version,
         score_valid_until=valid_until,
     )
+    _cache_set(wallet, response)
+
+    if not include_shap:
+        return response.model_copy(update={"top_factors": []})
+    return response
 
 
 @app.post(
