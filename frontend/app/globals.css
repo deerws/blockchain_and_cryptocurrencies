@@ -102,10 +102,10 @@ body {
   background: var(--muted);
 }
 
-/* WSJ-style serif headlines using system fonts */
+/* Terminal-style headlines */
 .headline-serif {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-weight: 400;
+  font-family: var(--font-sans);
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 

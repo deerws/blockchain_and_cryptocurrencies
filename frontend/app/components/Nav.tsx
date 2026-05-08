@@ -65,7 +65,7 @@ export default function Nav() {
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-lg font-semibold tracking-tight">
+            <span className="text-lg font-mono font-bold tracking-tight">
               Chain<span style={{ color: 'var(--primary)' }}>Score</span>
             </span>
           </Link>

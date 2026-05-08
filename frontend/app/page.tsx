@@ -271,25 +271,38 @@ export default function Home() {
         
         {/* ── HERO / REPORT TITLE ─────────────────────────────────────── */}
         <section className="mb-10">
-          <h1 className="headline-serif text-4xl md:text-5xl mb-3">
-            Wallet Credit Intelligence Report
-          </h1>
-          <p className="text-lg mb-6" style={{ color: 'var(--muted)' }}>
-            On-chain credit risk analysis and behavioral scoring
-          </p>
-          
-          {/* Analyst Note */}
-          <div className="border p-4 rounded card-shadow max-w-3xl" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
-            <div className="flex items-start gap-3">
-              <div className="w-1 h-full rounded-full shrink-0" style={{ minHeight: "40px", background: 'var(--primary)' }} />
-              <div>
-                <p className="text-xs uppercase tracking-wider mb-1 font-medium" style={{ color: 'var(--muted)' }}>
-                  Analyst Note
-                </p>
-                <p className="text-sm leading-relaxed">
-                  Wallet exhibits disciplined leverage behavior across Aave and Compound with low short-term liquidation probability. Consistent repayment patterns suggest institutional-grade risk management practices.
-                </p>
+          <div className="flex items-center justify-between gap-8">
+            <div className="flex-1">
+              <h1 className="headline-serif text-4xl md:text-5xl mb-3">
+                Wallet Credit Intelligence Report
+              </h1>
+              <p className="text-lg mb-6" style={{ color: 'var(--muted)' }}>
+                On-chain credit risk analysis and behavioral scoring
+              </p>
+              
+              {/* Analyst Note */}
+              <div className="border p-4 rounded card-shadow max-w-2xl" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                <div className="flex items-start gap-3">
+                  <div className="w-1 h-full rounded-full shrink-0" style={{ minHeight: "40px", background: 'var(--primary)' }} />
+                  <div>
+                    <p className="text-xs uppercase tracking-wider mb-1 font-medium" style={{ color: 'var(--muted)' }}>
+                      Analyst Note
+                    </p>
+                    <p className="text-sm leading-relaxed">
+                      Wallet exhibits disciplined leverage behavior across Aave and Compound with low short-term liquidation probability. Consistent repayment patterns suggest institutional-grade risk management practices.
+                    </p>
+                  </div>
+                </div>
               </div>
+            </div>
+            
+            {/* Hero Illustration */}
+            <div className="hidden lg:block w-64 xl:w-80 shrink-0">
+              <img 
+                src="/hero-bull.jpg" 
+                alt="ChainScore Bull - Wall Street meets Blockchain"
+                className="w-full h-auto rounded-lg opacity-90"
+              />
             </div>
           </div>
         </section>
