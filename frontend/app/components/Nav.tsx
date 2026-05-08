@@ -6,10 +6,7 @@ import { useEffect, useState } from "react";
 
 const navItems = [
   { label: "Dashboard", href: "/" },
-  { label: "Watchlist", href: "/watchlist" },
-  { label: "Alerts", href: "/alerts" },
-  { label: "Reports", href: "/reports" },
-  { label: "API", href: "/api-docs" },
+  { label: "About", href: "/about" },
 ];
 
 function ThemeToggle() {
@@ -93,17 +90,16 @@ export default function Nav() {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
+            <a
+              href="https://github.com/deerws/ChainScore"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden sm:block text-[13px] transition-opacity hover:opacity-70"
+              style={{ color: 'var(--muted)' }}
+            >
+              GitHub ↗
+            </a>
             <ThemeToggle />
-            
-            <div className="flex items-center gap-2 pl-3 border-l border-[var(--border)]">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'var(--primary)', opacity: 0.1 }}>
-                <span className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>VB</span>
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-sm font-medium">vitalik.eth</p>
-                <p className="text-[11px] font-mono" style={{ color: 'var(--muted)' }}>0xd8dA...6045</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>

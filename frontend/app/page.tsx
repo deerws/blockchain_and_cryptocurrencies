@@ -1,6 +1,24 @@
 "use client";
 
 import { useState } from "react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+interface ShapFactor {
+  feature: string;
+  shap_value: number;
+  direction: "increases_risk" | "decreases_risk";
+}
+
+interface ApiResult {
+  wallet_address: string;
+  score: number;
+  risk_tier: string;
+  probability_of_default: number;
+  top_factors: ShapFactor[];
+  score_valid_until: string;
+}
+
 import {
   LineChart,
   Line,
@@ -145,8 +163,8 @@ function ScoreGauge({ score }: { score: number }) {
 
 // ── SHAP Feature Importance ────────────────────────────────────────────────
 
-function ShapFeatureChart() {
-  const data = SHAP_FACTORS.map(f => ({
+function ShapFeatureChart({ factors }: { factors: typeof SHAP_FACTORS }) {
+  const data = factors.map(f => ({
     name: f.feature,
     value: f.value,
     impact: f.impact,
@@ -264,6 +282,55 @@ function TransactionChart() {
 
 export default function Home() {
   const [address, setAddress] = useState(MOCK_WALLET.address);
+  const [apiResult, setApiResult] = useState<ApiResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const score       = apiResult?.score                    ?? MOCK_WALLET.score;
+  const riskTier    = apiResult?.risk_tier                ?? MOCK_WALLET.riskTier;
+  const pd          = apiResult?.probability_of_default   ?? MOCK_WALLET.pdEstimate;
+  const validDays   = apiResult?.score_valid_until
+    ? Math.max(0, Math.round((new Date(apiResult.score_valid_until).getTime() - Date.now()) / 86_400_000))
+    : MOCK_WALLET.scoreValidDays;
+
+  const shapData = apiResult?.top_factors.length
+    ? apiResult.top_factors.map((f) => ({
+        feature: f.feature,
+        value: f.shap_value,
+        impact: f.direction === "decreases_risk" ? "positive" : "negative",
+        interpretation: f.direction === "decreases_risk"
+          ? "Reduces probability of default"
+          : "Increases probability of default",
+      }))
+    : SHAP_FACTORS;
+
+  async function analyzeWallet() {
+    const addr = address.trim();
+    if (!addr.startsWith("0x") || addr.length !== 42) {
+      setApiError("Enter a valid Ethereum address (42-char hex starting with 0x).");
+      return;
+    }
+    setLoading(true);
+    setApiError(null);
+    setApiResult(null);
+    try {
+      const res = await fetch(`${API_BASE}/v1/score`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet_address: addr, include_shap: true }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.detail ?? `HTTP ${res.status}`);
+      }
+      const data: ApiResult = await res.json();
+      setApiResult(data);
+    } catch (e: unknown) {
+      setApiError(e instanceof Error ? e.message : "Failed to reach API.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <main className="min-h-screen" style={{ background: 'var(--background)' }}>
@@ -280,27 +347,38 @@ export default function Home() {
                 On-chain credit risk analysis and behavioral scoring
               </p>
               
-              {/* Wallet Input - moved here */}
-              <div className="flex gap-3 mb-6">
+              {/* Wallet Input */}
+              <div className="flex gap-3 mb-3">
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && analyzeWallet()}
                   placeholder="Enter wallet address (0x...)"
                   className="flex-1 px-4 py-2.5 border rounded text-sm font-mono focus:outline-none focus:ring-1"
-                  style={{ 
-                    background: 'var(--card)', 
+                  style={{
+                    background: 'var(--card)',
                     borderColor: 'var(--border)',
                     color: 'var(--foreground)',
                   }}
                 />
-                <button 
-                  className="px-5 py-2.5 text-sm font-medium rounded hover:opacity-90 transition-opacity"
+                <button
+                  onClick={analyzeWallet}
+                  disabled={loading}
+                  className="px-5 py-2.5 text-sm font-medium rounded hover:opacity-90 transition-opacity disabled:opacity-50"
                   style={{ background: 'var(--primary)', color: '#fff' }}
                 >
-                  Analyze
+                  {loading ? "Scoring…" : "Analyze"}
                 </button>
               </div>
+              {apiError && (
+                <p className="text-xs mb-3 px-1" style={{ color: 'var(--negative)' }}>{apiError}</p>
+              )}
+              {apiResult && (
+                <p className="text-xs mb-3 px-1 font-mono" style={{ color: 'var(--muted)' }}>
+                  Scored: {apiResult.wallet_address.slice(0,6)}…{apiResult.wallet_address.slice(-4)} · valid until {apiResult.score_valid_until}
+                </p>
+              )}
               
               {/* Analyst Note */}
               <div className="border p-4 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
@@ -336,7 +414,7 @@ export default function Home() {
             <h2 className="text-xs uppercase tracking-wider mb-6 font-medium" style={{ color: 'var(--muted)' }}>
               Credit Score
             </h2>
-            <ScoreGauge score={MOCK_WALLET.score} />
+            <ScoreGauge score={score} />
             <div className="flex justify-center gap-4 mt-4 text-[10px] uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
               <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: 'var(--negative)' }} /> High</span>
               <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: 'var(--warning)' }} /> Med-High</span>
@@ -352,15 +430,17 @@ export default function Home() {
             <div className="grid grid-cols-3 gap-4">
               <div className="border p-4 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
                 <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--muted)' }}>Risk Tier</p>
-                <p className="text-xl font-medium" style={{ color: 'var(--positive)' }}>Low</p>
+                <p className="text-xl font-medium capitalize" style={{ color: 'var(--positive)' }}>
+                  {riskTier.replace("_", " ")}
+                </p>
               </div>
               <div className="border p-4 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
                 <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--muted)' }}>PD Estimate</p>
-                <p className="text-xl font-medium">{(MOCK_WALLET.pdEstimate * 100).toFixed(1)}%</p>
+                <p className="text-xl font-medium">{(pd * 100).toFixed(1)}%</p>
               </div>
               <div className="border p-4 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
                 <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--muted)' }}>Valid For</p>
-                <p className="text-xl font-medium">{MOCK_WALLET.scoreValidDays}d</p>
+                <p className="text-xl font-medium">{validDays}d</p>
               </div>
             </div>
 
@@ -407,10 +487,10 @@ export default function Home() {
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ShapFeatureChart />
-              
+              <ShapFeatureChart factors={shapData} />
+
               <div className="space-y-3">
-                {SHAP_FACTORS.map((factor, i) => (
+                {shapData.map((factor, i) => (
                   <div key={i} className="flex items-start gap-3 text-sm">
                     <span 
                       className="w-2 h-2 rounded-full mt-1.5 shrink-0"
