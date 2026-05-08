@@ -64,9 +64,14 @@ const PROTOCOL_EXPOSURE = [
   { protocol: "Lido", exposure: "$2.1M", netUsage: "+$1.2M", riskSignal: "Low" },
 ];
 
+// Deterministic seed so server and client render identical values (no hydration mismatch)
+function seededRand(seed: number) {
+  const x = Math.sin(seed + 1) * 10000;
+  return x - Math.floor(x);
+}
 const ACTIVITY_HEATMAP = Array.from({ length: 90 }, (_, i) => ({
   day: i,
-  value: Math.floor(Math.random() * 5),
+  value: Math.floor(seededRand(i) * 5),
 }));
 
 const TRANSACTION_HISTORY = [

@@ -145,18 +145,18 @@ body {
   background-size: 100% 32px;
 }
 
-/* Gauge colors */
-.gauge-excellent { fill: #166534; }
-.gauge-good { fill: #22C55E; }
-.gauge-fair { fill: #F59E0B; }
-.gauge-poor { fill: #F97316; }
-.gauge-critical { fill: #991B1B; }
+/* Gauge colors — use `color` so SVG currentColor works without fill bleeding */
+.gauge-excellent { color: #166534; }
+.gauge-good      { color: #22C55E; }
+.gauge-fair      { color: #F59E0B; }
+.gauge-poor      { color: #F97316; }
+.gauge-critical  { color: #991B1B; }
 
-.dark .gauge-excellent { fill: #22C55E; }
-.dark .gauge-good { fill: #4ADE80; }
-.dark .gauge-fair { fill: #FBBF24; }
-.dark .gauge-poor { fill: #FB923C; }
-.dark .gauge-critical { fill: #EF4444; }
+.dark .gauge-excellent { color: #22C55E; }
+.dark .gauge-good      { color: #4ADE80; }
+.dark .gauge-fair      { color: #FBBF24; }
+.dark .gauge-poor      { color: #FB923C; }
+.dark .gauge-critical  { color: #EF4444; }
 
 /* Heatmap intensity */
 .heatmap-1 { background: var(--primary); opacity: 0.3; }
