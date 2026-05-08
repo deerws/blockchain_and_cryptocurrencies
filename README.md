@@ -154,10 +154,45 @@ python -m src.models.predict 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
 ### Run the API
 
 ```bash
-uvicorn src.api.main:app --reload --port 8000
-# → POST http://localhost:8000/v1/score
-# → GET  http://localhost:8000/health
+.venv/bin/python3 -m uvicorn src.api.main:app --reload --port 8000
 ```
+
+Swagger UI available at [http://localhost:8000/docs](http://localhost:8000/docs).
+
+#### Score a single wallet
+
+```bash
+curl -s -X POST http://localhost:8000/v1/score \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"}'
+```
+
+#### Score multiple wallets (batch, up to 20)
+
+```bash
+curl -s -X POST http://localhost:8000/v1/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "wallet_addresses": [
+      "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+      "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B"
+    ],
+    "include_shap": false
+  }'
+```
+
+Response includes per-wallet scores, risk tiers, and PD; failed wallets carry an `error` field instead of aborting the whole batch.
+
+### Run the frontend
+
+```bash
+cd frontend
+bun install       # first time only
+bun run dev
+# → http://localhost:3000
+```
+
+The frontend expects the FastAPI service running on `http://localhost:8000`.
 
 ---
 
@@ -177,9 +212,9 @@ bool valid = anchor.verifyScore(wallet, score, validUntil, modelVersion);
 - [x] **Phase 0** — Project scaffolding and repository structure
 - [x] **Phase 1** — Data engineering: 49,748 liquidation events, 15,809 labeled wallets
 - [x] **Phase 2** — Modeling: 45 features, LR + LightGBM, KS/Gini/AUC/SHAP evaluation
-- [ ] **Phase 3** — Scale dataset to 15,809 wallets and improve model metrics
-- [ ] **Phase 4** — Deploy API + anchor scores on Sepolia testnet
-- [ ] **Phase 5** — React dashboard for live demo
+- [x] **Phase 3** — REST API (single + batch scoring) with Swagger docs; Next.js dashboard with dark mode, gauge, SHAP chart, analyst insights
+- [ ] **Phase 4** — Scale dataset to 15,809 wallets and retrain models
+- [ ] **Phase 5** — Deploy API + anchor scores on Sepolia testnet
 
 ---
 
