@@ -2,26 +2,131 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-:root {
-  --bg:      #f8fafc;
-  --card:    #ffffff;
-  --border:  #e2e8f0;
-  --fg:      #0f172a;
-  --muted:   #64748b;
-  --brand:   #185FA5;
+@theme inline {
+  --font-sans: 'Geist', 'Geist Fallback', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
+  
+  /* Goldman Sachs Terminal Theme - Institutional Dark */
+  --color-background: #0a0a0b;
+  --color-foreground: #e8e8e8;
+  --color-card: #111113;
+  --color-card-foreground: #e8e8e8;
+  --color-muted: #71717a;
+  --color-muted-foreground: #a1a1aa;
+  --color-border: #27272a;
+  --color-accent: #18181b;
+  --color-accent-foreground: #fafafa;
+  
+  /* Primary - Institutional Blue */
+  --color-primary: #3b82f6;
+  --color-primary-foreground: #ffffff;
+  
+  /* Semantic colors for data */
+  --color-positive: #22c55e;
+  --color-negative: #ef4444;
+  --color-warning: #f59e0b;
+  --color-info: #3b82f6;
+  
+  --radius: 0.5rem;
 }
 
-.dark {
-  --bg:      #0f172a;
-  --card:    #1e293b;
-  --border:  #334155;
-  --fg:      #f1f5f9;
-  --muted:   #94a3b8;
+/* CSS Variables for component use */
+:root {
+  --background: #0a0a0b;
+  --foreground: #e8e8e8;
+  --card: #111113;
+  --card-hover: #18181b;
+  --border: #27272a;
+  --border-subtle: #1f1f22;
+  --muted: #71717a;
+  --muted-foreground: #a1a1aa;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --positive: #22c55e;
+  --negative: #ef4444;
+  --warning: #f59e0b;
+}
+
+/* Light mode overrides (if needed) */
+.light {
+  --background: #fafafa;
+  --foreground: #09090b;
+  --card: #ffffff;
+  --card-hover: #f4f4f5;
+  --border: #e4e4e7;
+  --border-subtle: #f4f4f5;
+  --muted: #71717a;
+  --muted-foreground: #52525b;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  background: var(--background);
 }
 
 body {
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  transition: background 0.2s, color 0.2s;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Terminal-style scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Data grid lines */
+.data-grid {
+  background-image: 
+    linear-gradient(var(--border-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Glow effects for key metrics */
+.metric-glow {
+  box-shadow: 0 0 20px -5px var(--primary);
+}
+
+/* Terminal text effect */
+.terminal-text {
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+/* Subtle scan line effect */
+.scan-lines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
 }
