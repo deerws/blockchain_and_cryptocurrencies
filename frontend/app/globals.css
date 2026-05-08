@@ -4,49 +4,67 @@
 
 @theme inline {
   --font-sans: 'Inter', 'Inter Fallback', system-ui, sans-serif;
-  --font-serif: 'Newsreader', 'Georgia', serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  --font-mono: 'JetBrains Mono', monospace;
   
-  /* ChainScore Institutional Light Theme */
-  --color-background: #FCFCFB;
-  --color-foreground: #111827;
+  /* Light Theme - WSJ Editorial */
+  --color-background: #FAFAF9;
+  --color-foreground: #18181B;
   --color-card: #FFFFFF;
-  --color-card-foreground: #111827;
-  --color-muted: #F9FAFB;
-  --color-muted-foreground: #6B7280;
-  --color-border: #E5E7EB;
-  --color-border-subtle: #F3F4F6;
-  --color-accent: #F3F4F6;
-  --color-accent-foreground: #111827;
+  --color-card-foreground: #18181B;
+  --color-muted: #F4F4F5;
+  --color-muted-foreground: #71717A;
+  --color-border: #E4E4E7;
+  --color-border-subtle: #F4F4F5;
+  --color-accent: #F4F4F5;
+  --color-accent-foreground: #18181B;
   
   /* Primary - Institutional Blue */
-  --color-primary: #185FA5;
+  --color-primary: #1E3A5F;
   --color-primary-foreground: #FFFFFF;
   
-  /* Semantic colors for data */
-  --color-positive: #15803D;
-  --color-negative: #B91C1C;
-  --color-warning: #D97706;
-  --color-info: #185FA5;
+  /* Semantic colors */
+  --color-positive: #166534;
+  --color-negative: #991B1B;
+  --color-warning: #B45309;
+  --color-info: #1E3A5F;
   
   --radius: 0.25rem;
 }
 
-/* CSS Variables for component use */
+/* Light mode variables */
 :root {
-  --background: #FCFCFB;
-  --foreground: #111827;
+  --background: #FAFAF9;
+  --foreground: #18181B;
   --card: #FFFFFF;
   --card-hover: #F9FAFB;
-  --border: #E5E7EB;
-  --border-subtle: #F3F4F6;
-  --muted: #6B7280;
-  --muted-foreground: #9CA3AF;
-  --primary: #185FA5;
-  --primary-hover: #1E4A7D;
-  --positive: #15803D;
-  --negative: #B91C1C;
-  --warning: #D97706;
+  --border: #E4E4E7;
+  --border-subtle: #F4F4F5;
+  --muted: #71717A;
+  --muted-foreground: #A1A1AA;
+  --primary: #1E3A5F;
+  --primary-hover: #162D4A;
+  --positive: #166534;
+  --negative: #991B1B;
+  --warning: #B45309;
+  --surface-elevated: #FFFFFF;
+}
+
+/* Dark mode variables */
+.dark {
+  --background: #09090B;
+  --foreground: #FAFAFA;
+  --card: #18181B;
+  --card-hover: #27272A;
+  --border: #27272A;
+  --border-subtle: #3F3F46;
+  --muted: #A1A1AA;
+  --muted-foreground: #71717A;
+  --primary: #3B82F6;
+  --primary-hover: #2563EB;
+  --positive: #22C55E;
+  --negative: #EF4444;
+  --warning: #F59E0B;
+  --surface-elevated: #18181B;
 }
 
 * {
@@ -84,9 +102,9 @@ body {
   background: var(--muted);
 }
 
-/* Editorial serif headlines */
+/* WSJ-style serif headlines using system fonts */
 .headline-serif {
-  font-family: var(--font-serif);
+  font-family: Georgia, 'Times New Roman', serif;
   font-weight: 400;
   letter-spacing: -0.02em;
 }
@@ -100,7 +118,11 @@ body {
 
 /* Subtle shadow for cards */
 .card-shadow {
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+}
+
+.dark .card-shadow {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
 }
 
 /* Dense data table styling */
@@ -122,3 +144,22 @@ body {
   background-image: linear-gradient(var(--border-subtle) 1px, transparent 1px);
   background-size: 100% 32px;
 }
+
+/* Gauge colors */
+.gauge-excellent { fill: #166534; }
+.gauge-good { fill: #22C55E; }
+.gauge-fair { fill: #F59E0B; }
+.gauge-poor { fill: #F97316; }
+.gauge-critical { fill: #991B1B; }
+
+.dark .gauge-excellent { fill: #22C55E; }
+.dark .gauge-good { fill: #4ADE80; }
+.dark .gauge-fair { fill: #FBBF24; }
+.dark .gauge-poor { fill: #FB923C; }
+.dark .gauge-critical { fill: #EF4444; }
+
+/* Heatmap intensity */
+.heatmap-1 { background: var(--primary); opacity: 0.3; }
+.heatmap-2 { background: var(--primary); opacity: 0.5; }
+.heatmap-3 { background: var(--primary); opacity: 0.7; }
+.heatmap-4 { background: var(--primary); opacity: 1; }

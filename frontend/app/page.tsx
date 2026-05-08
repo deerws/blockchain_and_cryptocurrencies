@@ -80,13 +80,13 @@ function ScoreGauge({ score }: { score: number }) {
   const percentage = score / 1000;
   const angle = percentage * 180;
   
-  // Risk band colors
+  // Risk band colors - work in both themes
   const bands = [
-    { color: "#B91C1C", start: 0, end: 20 },
-    { color: "#D97706", start: 20, end: 40 },
-    { color: "#CA8A04", start: 40, end: 60 },
-    { color: "#185FA5", start: 60, end: 80 },
-    { color: "#15803D", start: 80, end: 100 },
+    { className: "gauge-critical", start: 0, end: 20 },
+    { className: "gauge-poor", start: 20, end: 40 },
+    { className: "gauge-fair", start: 40, end: 60 },
+    { className: "gauge-good", start: 60, end: 80 },
+    { className: "gauge-excellent", start: 80, end: 100 },
   ];
 
   return (
@@ -112,10 +112,11 @@ function ScoreGauge({ score }: { score: number }) {
               key={i}
               d={`M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
               fill="none"
-              stroke={band.color}
+              stroke="currentColor"
+              className={band.className}
               strokeWidth="12"
               strokeLinecap="butt"
-              opacity={0.2}
+              opacity={0.25}
             />
           );
         })}
@@ -124,16 +125,17 @@ function ScoreGauge({ score }: { score: number }) {
         <path
           d={`M 20 100 A 80 80 0 ${angle > 90 ? 1 : 0} 1 ${100 + 80 * Math.cos((angle - 180) * Math.PI / 180)} ${100 + 80 * Math.sin((angle - 180) * Math.PI / 180)}`}
           fill="none"
-          stroke="#15803D"
+          stroke="currentColor"
+          className="gauge-excellent"
           strokeWidth="12"
           strokeLinecap="round"
         />
         
         {/* Center text */}
-        <text x="100" y="85" textAnchor="middle" className="font-serif text-4xl font-normal" fill="#111827">
+        <text x="100" y="85" textAnchor="middle" className="headline-serif text-4xl" fill="currentColor">
           {score}
         </text>
-        <text x="100" y="105" textAnchor="middle" className="text-xs" fill="#6B7280">
+        <text x="100" y="105" textAnchor="middle" className="text-xs" style={{ fill: 'var(--muted)' }}>
           / 1000
         </text>
       </svg>
@@ -156,31 +158,32 @@ function ShapFeatureChart() {
         <XAxis 
           type="number" 
           domain={[-0.1, 0.2]}
-          tick={{ fontSize: 10, fill: "#6B7280" }}
-          axisLine={{ stroke: "#E5E7EB" }}
+          tick={{ fontSize: 10, fill: "var(--muted)" }}
+          axisLine={{ stroke: "var(--border)" }}
           tickLine={false}
         />
         <YAxis 
           type="category" 
           dataKey="name" 
           width={130}
-          tick={{ fontSize: 10, fill: "#6B7280", fontFamily: "monospace" }}
+          tick={{ fontSize: 10, fill: "var(--muted)", fontFamily: "var(--font-mono)" }}
           axisLine={false}
           tickLine={false}
         />
-        <ReferenceLine x={0} stroke="#E5E7EB" />
+        <ReferenceLine x={0} stroke="var(--border)" />
         <Tooltip
           formatter={(v) => [Number(v).toFixed(3), "Impact"]}
           contentStyle={{
-            background: "#FFFFFF",
-            border: "1px solid #E5E7EB",
+            background: "var(--card)",
+            border: "1px solid var(--border)",
             borderRadius: 4,
             fontSize: 11,
+            color: "var(--foreground)",
           }}
         />
         <Bar dataKey="value" barSize={16}>
           {data.map((d, i) => (
-            <Cell key={i} fill={d.impact === "positive" ? "#185FA5" : "#B91C1C"} />
+            <Cell key={i} fill={d.impact === "positive" ? "var(--primary)" : "var(--negative)"} />
           ))}
         </Bar>
       </BarChart>
@@ -193,11 +196,6 @@ function ShapFeatureChart() {
 function ActivityHeatmap() {
   const weeks = 13;
   const days = 7;
-  
-  const getColor = (value: number) => {
-    const colors = ["#F3F4F6", "#DBEAFE", "#93C5FD", "#3B82F6", "#1D4ED8"];
-    return colors[Math.min(value, 4)];
-  };
 
   return (
     <div className="flex gap-1">
@@ -209,8 +207,11 @@ function ActivityHeatmap() {
             return (
               <div
                 key={day}
-                className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: getColor(value) }}
+                className={`w-3 h-3 rounded-sm heatmap-${value}`}
+                style={{
+                  backgroundColor: value === 0 ? 'var(--border)' : undefined,
+                  opacity: value === 0 ? 0.5 : 1,
+                }}
               />
             );
           })}
@@ -228,28 +229,29 @@ function TransactionChart() {
       <LineChart data={TRANSACTION_HISTORY} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
         <XAxis 
           dataKey="month" 
-          tick={{ fontSize: 10, fill: "#6B7280" }}
-          axisLine={{ stroke: "#E5E7EB" }}
+          tick={{ fontSize: 10, fill: "var(--muted)" }}
+          axisLine={{ stroke: "var(--border)" }}
           tickLine={false}
         />
         <YAxis 
-          tick={{ fontSize: 10, fill: "#6B7280" }}
+          tick={{ fontSize: 10, fill: "var(--muted)" }}
           axisLine={false}
           tickLine={false}
           width={30}
         />
         <Tooltip
           contentStyle={{
-            background: "#FFFFFF",
-            border: "1px solid #E5E7EB",
+            background: "var(--card)",
+            border: "1px solid var(--border)",
             borderRadius: 4,
             fontSize: 11,
+            color: "var(--foreground)",
           }}
         />
         <Line 
           type="monotone" 
           dataKey="value" 
-          stroke="#185FA5" 
+          stroke="var(--primary)" 
           strokeWidth={1.5}
           dot={false}
         />
@@ -264,27 +266,27 @@ export default function Home() {
   const [address, setAddress] = useState(MOCK_WALLET.address);
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen" style={{ background: 'var(--background)' }}>
       <div className="max-w-[1400px] mx-auto px-6 py-8">
         
         {/* ── HERO / REPORT TITLE ─────────────────────────────────────── */}
         <section className="mb-10">
-          <h1 className="headline-serif text-4xl md:text-5xl text-foreground mb-3">
+          <h1 className="headline-serif text-4xl md:text-5xl mb-3">
             Wallet Credit Intelligence Report
           </h1>
-          <p className="text-muted-foreground text-lg mb-6">
+          <p className="text-lg mb-6" style={{ color: 'var(--muted)' }}>
             On-chain credit risk analysis and behavioral scoring
           </p>
           
           {/* Analyst Note */}
-          <div className="bg-card border border-border p-4 rounded card-shadow max-w-3xl">
+          <div className="border p-4 rounded card-shadow max-w-3xl" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
             <div className="flex items-start gap-3">
-              <div className="w-1 h-full bg-primary rounded-full shrink-0" style={{ minHeight: "40px" }} />
+              <div className="w-1 h-full rounded-full shrink-0" style={{ minHeight: "40px", background: 'var(--primary)' }} />
               <div>
-                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1 font-medium">
+                <p className="text-xs uppercase tracking-wider mb-1 font-medium" style={{ color: 'var(--muted)' }}>
                   Analyst Note
                 </p>
-                <p className="text-sm text-foreground leading-relaxed">
+                <p className="text-sm leading-relaxed">
                   Wallet exhibits disciplined leverage behavior across Aave and Compound with low short-term liquidation probability. Consistent repayment patterns suggest institutional-grade risk management practices.
                 </p>
               </div>
@@ -300,9 +302,17 @@ export default function Home() {
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Enter wallet address (0x...)"
-              className="flex-1 px-4 py-2.5 border border-border rounded bg-card text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 px-4 py-2.5 border rounded text-sm font-mono focus:outline-none focus:ring-1"
+              style={{ 
+                background: 'var(--card)', 
+                borderColor: 'var(--border)',
+                color: 'var(--foreground)',
+              }}
             />
-            <button className="px-5 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded hover:opacity-90 transition-opacity">
+            <button 
+              className="px-5 py-2.5 text-sm font-medium rounded hover:opacity-90 transition-opacity"
+              style={{ background: 'var(--primary)', color: '#fff' }}
+            >
               Analyze
             </button>
           </div>
@@ -311,17 +321,17 @@ export default function Home() {
         {/* ── CREDIT SCORE SECTION (Two columns) ──────────────────────── */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
           {/* LEFT: Score Gauge */}
-          <div className="bg-card border border-border p-6 rounded card-shadow">
-            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-6 font-medium">
+          <div className="border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-xs uppercase tracking-wider mb-6 font-medium" style={{ color: 'var(--muted)' }}>
               Credit Score
             </h2>
             <ScoreGauge score={MOCK_WALLET.score} />
-            <div className="flex justify-center gap-4 mt-4 text-[10px] uppercase tracking-wider text-muted-foreground">
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#B91C1C" }} /> High</span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#D97706" }} /> Med-High</span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#CA8A04" }} /> Medium</span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#185FA5" }} /> Low</span>
-              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: "#15803D" }} /> V.Low</span>
+            <div className="flex justify-center gap-4 mt-4 text-[10px] uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: 'var(--negative)' }} /> High</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: 'var(--warning)' }} /> Med-High</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: '#CA8A04' }} /> Medium</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: 'var(--primary)' }} /> Low</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: 'var(--positive)' }} /> V.Low</span>
             </div>
           </div>
 
@@ -329,43 +339,43 @@ export default function Home() {
           <div className="flex flex-col gap-4">
             {/* Top row - main metrics */}
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-card border border-border p-4 rounded card-shadow">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Risk Tier</p>
-                <p className="text-xl font-medium text-positive">Low</p>
+              <div className="border p-4 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--muted)' }}>Risk Tier</p>
+                <p className="text-xl font-medium" style={{ color: 'var(--positive)' }}>Low</p>
               </div>
-              <div className="bg-card border border-border p-4 rounded card-shadow">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">PD Estimate</p>
-                <p className="text-xl font-medium text-foreground">{(MOCK_WALLET.pdEstimate * 100).toFixed(1)}%</p>
+              <div className="border p-4 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--muted)' }}>PD Estimate</p>
+                <p className="text-xl font-medium">{(MOCK_WALLET.pdEstimate * 100).toFixed(1)}%</p>
               </div>
-              <div className="bg-card border border-border p-4 rounded card-shadow">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Valid For</p>
-                <p className="text-xl font-medium text-foreground">{MOCK_WALLET.scoreValidDays}d</p>
+              <div className="border p-4 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--muted)' }}>Valid For</p>
+                <p className="text-xl font-medium">{MOCK_WALLET.scoreValidDays}d</p>
               </div>
             </div>
 
             {/* Key stats table */}
-            <div className="bg-card border border-border p-4 rounded card-shadow flex-1">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Key Statistics</p>
+            <div className="border p-4 rounded card-shadow flex-1" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+              <p className="text-[10px] uppercase tracking-wider mb-3" style={{ color: 'var(--muted)' }}>Key Statistics</p>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Wallet Age</span>
-                  <span className="font-mono text-foreground">{MOCK_WALLET.walletAge.toLocaleString()} days</span>
+                  <span style={{ color: 'var(--muted)' }}>Wallet Age</span>
+                  <span className="font-mono">{MOCK_WALLET.walletAge.toLocaleString()} days</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Active Protocols</span>
-                  <span className="font-mono text-foreground">{MOCK_WALLET.activeProtocols}</span>
+                  <span style={{ color: 'var(--muted)' }}>Active Protocols</span>
+                  <span className="font-mono">{MOCK_WALLET.activeProtocols}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Repaid</span>
-                  <span className="font-mono text-foreground">${(MOCK_WALLET.totalRepaid / 1000000).toFixed(2)}M</span>
+                  <span style={{ color: 'var(--muted)' }}>Total Repaid</span>
+                  <span className="font-mono">${(MOCK_WALLET.totalRepaid / 1000000).toFixed(2)}M</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Borrowed</span>
-                  <span className="font-mono text-foreground">${(MOCK_WALLET.totalBorrowed / 1000000).toFixed(2)}M</span>
+                  <span style={{ color: 'var(--muted)' }}>Total Borrowed</span>
+                  <span className="font-mono">${(MOCK_WALLET.totalBorrowed / 1000000).toFixed(2)}M</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Smart Money Percentile</span>
-                  <span className="font-mono text-primary">{MOCK_WALLET.smartMoneyPercentile}th</span>
+                  <span style={{ color: 'var(--muted)' }}>Smart Money Percentile</span>
+                  <span className="font-mono" style={{ color: 'var(--primary)' }}>{MOCK_WALLET.smartMoneyPercentile}th</span>
                 </div>
               </div>
             </div>
@@ -374,13 +384,13 @@ export default function Home() {
 
         {/* ── SHAP FEATURE IMPORTANCE ─────────────────────────────────── */}
         <section className="mb-10">
-          <div className="bg-card border border-border p-6 rounded card-shadow">
+          <div className="border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-sm font-medium text-foreground mb-1">{"What's Driving This Score?"}</h2>
-                <p className="text-xs text-muted-foreground">SHAP-based feature importance analysis</p>
+                <h2 className="text-sm font-medium mb-1">{"What's Driving This Score?"}</h2>
+                <p className="text-xs" style={{ color: 'var(--muted)' }}>SHAP-based feature importance analysis</p>
               </div>
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-1 rounded">
+              <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded" style={{ color: 'var(--muted)', background: 'var(--border)' }}>
                 ML Explainability
               </span>
             </div>
@@ -393,23 +403,23 @@ export default function Home() {
                   <div key={i} className="flex items-start gap-3 text-sm">
                     <span 
                       className="w-2 h-2 rounded-full mt-1.5 shrink-0"
-                      style={{ backgroundColor: factor.impact === "positive" ? "#185FA5" : "#B91C1C" }}
+                      style={{ background: factor.impact === "positive" ? "var(--primary)" : "var(--negative)" }}
                     />
                     <div>
-                      <span className="font-mono text-xs text-muted-foreground">{factor.feature}</span>
-                      <p className="text-foreground">{factor.interpretation}</p>
+                      <span className="font-mono text-xs" style={{ color: 'var(--muted)' }}>{factor.feature}</span>
+                      <p>{factor.interpretation}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex gap-6 mt-6 pt-4 border-t border-border text-xs">
-              <span className="flex items-center gap-2 text-muted-foreground">
-                <span className="w-3 h-1 rounded" style={{ backgroundColor: "#185FA5" }} /> Positive Impact
+            <div className="flex gap-6 mt-6 pt-4 border-t text-xs" style={{ borderColor: 'var(--border)' }}>
+              <span className="flex items-center gap-2" style={{ color: 'var(--muted)' }}>
+                <span className="w-3 h-1 rounded" style={{ background: 'var(--primary)' }} /> Positive Impact
               </span>
-              <span className="flex items-center gap-2 text-muted-foreground">
-                <span className="w-3 h-1 rounded" style={{ backgroundColor: "#B91C1C" }} /> Negative Impact
+              <span className="flex items-center gap-2" style={{ color: 'var(--muted)' }}>
+                <span className="w-3 h-1 rounded" style={{ background: 'var(--negative)' }} /> Negative Impact
               </span>
             </div>
           </div>
@@ -418,12 +428,12 @@ export default function Home() {
         {/* ── PROTOCOL EXPOSURE + ACTIVITY HEATMAP ────────────────────── */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
           {/* Protocol Exposure Table */}
-          <div className="lg:col-span-2 bg-card border border-border p-6 rounded card-shadow">
-            <h2 className="text-sm font-medium text-foreground mb-4">Protocol Exposure</h2>
+          <div className="lg:col-span-2 border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-sm font-medium mb-4">Protocol Exposure</h2>
             <div className="overflow-x-auto">
               <table className="w-full data-table">
                 <thead>
-                  <tr className="border-b border-border">
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
                     <th className="text-left py-2 pr-4">Protocol</th>
                     <th className="text-right py-2 px-4">Exposure</th>
                     <th className="text-right py-2 px-4">Net Usage</th>
@@ -432,20 +442,20 @@ export default function Home() {
                 </thead>
                 <tbody>
                   {PROTOCOL_EXPOSURE.map((row, i) => (
-                    <tr key={i} className="border-b border-border last:border-0">
+                    <tr key={i} style={{ borderBottom: i < PROTOCOL_EXPOSURE.length - 1 ? '1px solid var(--border)' : 'none' }}>
                       <td className="py-2.5 pr-4">
-                        <span className="font-medium text-foreground">{row.protocol}</span>
+                        <span className="font-medium">{row.protocol}</span>
                       </td>
-                      <td className="text-right py-2.5 px-4 font-mono text-foreground">{row.exposure}</td>
-                      <td className="text-right py-2.5 px-4 font-mono" style={{ color: row.netUsage.startsWith("+") ? "#15803D" : "#B91C1C" }}>
+                      <td className="text-right py-2.5 px-4 font-mono">{row.exposure}</td>
+                      <td className="text-right py-2.5 px-4 font-mono" style={{ color: row.netUsage.startsWith("+") ? "var(--positive)" : "var(--negative)" }}>
                         {row.netUsage}
                       </td>
                       <td className="text-right py-2.5 pl-4">
                         <span 
                           className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded"
                           style={{ 
-                            backgroundColor: row.riskSignal === "Low" ? "#DCFCE7" : "#FEF3C7",
-                            color: row.riskSignal === "Low" ? "#15803D" : "#D97706"
+                            backgroundColor: row.riskSignal === "Low" ? "rgba(22, 101, 52, 0.15)" : "rgba(217, 119, 6, 0.15)",
+                            color: row.riskSignal === "Low" ? "var(--positive)" : "var(--warning)"
                           }}
                         >
                           {row.riskSignal}
@@ -459,15 +469,15 @@ export default function Home() {
           </div>
 
           {/* Activity Heatmap */}
-          <div className="bg-card border border-border p-6 rounded card-shadow">
-            <h2 className="text-sm font-medium text-foreground mb-1">Activity Heatmap</h2>
-            <p className="text-xs text-muted-foreground mb-4">Last 90 days</p>
+          <div className="border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-sm font-medium mb-1">Activity Heatmap</h2>
+            <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>Last 90 days</p>
             <ActivityHeatmap />
-            <div className="flex items-center gap-2 mt-4 text-[10px] text-muted-foreground">
+            <div className="flex items-center gap-2 mt-4 text-[10px]" style={{ color: 'var(--muted)' }}>
               <span>Less</span>
               <div className="flex gap-0.5">
-                {["#F3F4F6", "#DBEAFE", "#93C5FD", "#3B82F6", "#1D4ED8"].map((c, i) => (
-                  <div key={i} className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: c }} />
+                {[0.3, 0.4, 0.6, 0.8, 1].map((o, i) => (
+                  <div key={i} className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--primary)', opacity: o }} />
                 ))}
               </div>
               <span>More</span>
@@ -477,19 +487,19 @@ export default function Home() {
 
         {/* ── TRANSACTION HISTORY CHART ───────────────────────────────── */}
         <section className="mb-10">
-          <div className="bg-card border border-border p-6 rounded card-shadow">
-            <h2 className="text-sm font-medium text-foreground mb-1">Transaction History</h2>
-            <p className="text-xs text-muted-foreground mb-4">Monthly transaction count (12 months)</p>
+          <div className="border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-sm font-medium mb-1">Transaction History</h2>
+            <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>Monthly transaction count (12 months)</p>
             <TransactionChart />
           </div>
         </section>
 
         {/* ── RISK ASSESSMENT ─────────────────────────────────────────── */}
         <section className="mb-10">
-          <div className="bg-card border border-border p-6 rounded card-shadow">
-            <h2 className="text-sm font-medium text-foreground mb-4">Risk Assessment</h2>
+          <div className="border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-sm font-medium mb-4">Risk Assessment</h2>
             <div className="max-w-3xl">
-              <p className="text-foreground leading-relaxed mb-4">
+              <p className="leading-relaxed mb-4">
                 This wallet demonstrates strong overall creditworthiness with a low probability of default. 
                 The subject maintains disciplined leverage management across major DeFi protocols, with a 
                 repayment-to-borrow ratio significantly above market average. Historical behavior suggests 
@@ -497,16 +507,16 @@ export default function Home() {
               </p>
               <div className="space-y-2">
                 <div className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-positive mt-2 shrink-0" />
-                  <p className="text-sm text-foreground"><strong>Strong repayment behavior</strong> — Consistent debt servicing across all active positions</p>
+                  <span className="w-1.5 h-1.5 rounded-full mt-2 shrink-0" style={{ background: 'var(--positive)' }} />
+                  <p className="text-sm"><strong>Strong repayment behavior</strong> — Consistent debt servicing across all active positions</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-positive mt-2 shrink-0" />
-                  <p className="text-sm text-foreground"><strong>Healthy on-chain history</strong> — Extended wallet age with diversified protocol usage</p>
+                  <span className="w-1.5 h-1.5 rounded-full mt-2 shrink-0" style={{ background: 'var(--positive)' }} />
+                  <p className="text-sm"><strong>Healthy on-chain history</strong> — Extended wallet age with diversified protocol usage</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-warning mt-2 shrink-0" />
-                  <p className="text-sm text-foreground"><strong>Monitor short-term activity spike</strong> — Recent transaction volume elevated vs. baseline</p>
+                  <span className="w-1.5 h-1.5 rounded-full mt-2 shrink-0" style={{ background: 'var(--warning)' }} />
+                  <p className="text-sm"><strong>Monitor short-term activity spike</strong> — Recent transaction volume elevated vs. baseline</p>
                 </div>
               </div>
             </div>
@@ -515,12 +525,12 @@ export default function Home() {
 
         {/* ── RECENT ACTIVITY TABLE ───────────────────────────────────── */}
         <section className="mb-10">
-          <div className="bg-card border border-border p-6 rounded card-shadow">
-            <h2 className="text-sm font-medium text-foreground mb-4">Recent Activity</h2>
+          <div className="border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-sm font-medium mb-4">Recent Activity</h2>
             <div className="overflow-x-auto">
               <table className="w-full data-table">
                 <thead>
-                  <tr className="border-b border-border">
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
                     <th className="text-left py-2 pr-4">Date</th>
                     <th className="text-left py-2 px-4">Protocol</th>
                     <th className="text-left py-2 px-4">Type</th>
@@ -530,22 +540,22 @@ export default function Home() {
                 </thead>
                 <tbody>
                   {RECENT_TRANSACTIONS.map((tx, i) => (
-                    <tr key={i} className="border-b border-border last:border-0">
-                      <td className="py-2.5 pr-4 font-mono text-muted-foreground">{tx.date}</td>
-                      <td className="py-2.5 px-4 font-medium text-foreground">{tx.protocol}</td>
+                    <tr key={i} style={{ borderBottom: i < RECENT_TRANSACTIONS.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <td className="py-2.5 pr-4 font-mono" style={{ color: 'var(--muted)' }}>{tx.date}</td>
+                      <td className="py-2.5 px-4 font-medium">{tx.protocol}</td>
                       <td className="py-2.5 px-4">
                         <span 
                           className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded"
                           style={{ 
-                            backgroundColor: tx.type === "Repay" ? "#DCFCE7" : tx.type === "Borrow" ? "#FEE2E2" : "#F3F4F6",
-                            color: tx.type === "Repay" ? "#15803D" : tx.type === "Borrow" ? "#B91C1C" : "#6B7280"
+                            backgroundColor: tx.type === "Repay" ? "rgba(22, 101, 52, 0.15)" : tx.type === "Borrow" ? "rgba(185, 28, 28, 0.15)" : "var(--border)",
+                            color: tx.type === "Repay" ? "var(--positive)" : tx.type === "Borrow" ? "var(--negative)" : "var(--muted)"
                           }}
                         >
                           {tx.type}
                         </span>
                       </td>
-                      <td className="py-2.5 px-4 text-right font-mono text-foreground">{tx.amount}</td>
-                      <td className="py-2.5 pl-4 text-right font-mono text-muted-foreground">{tx.usd}</td>
+                      <td className="py-2.5 px-4 text-right font-mono">{tx.amount}</td>
+                      <td className="py-2.5 pl-4 text-right font-mono" style={{ color: 'var(--muted)' }}>{tx.usd}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -555,18 +565,18 @@ export default function Home() {
         </section>
 
         {/* ── FOOTER ──────────────────────────────────────────────────── */}
-        <footer className="border-t border-border pt-6 mt-10">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs text-muted-foreground">
+        <footer className="border-t pt-6 mt-10" style={{ borderColor: 'var(--border)' }}>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs" style={{ color: 'var(--muted)' }}>
             <div>
-              <p className="font-medium text-foreground mb-1">ChainScore</p>
+              <p className="font-medium mb-1" style={{ color: 'var(--foreground)' }}>ChainScore</p>
               <p>Institutional-grade on-chain credit intelligence</p>
             </div>
             <div className="flex gap-6">
-              <a href="https://github.com/deerws/ChainScore" className="hover:text-foreground transition-colors">GitHub</a>
-              <a href="https://br.linkedin.com/in/andrepinheiropaes" className="hover:text-foreground transition-colors">@andrepinheiropaes</a>
+              <a href="https://github.com/deerws/ChainScore" className="hover:opacity-70 transition-opacity">GitHub</a>
+              <a href="https://br.linkedin.com/in/andrepinheiropaes" className="hover:opacity-70 transition-opacity">@andrepinheiropaes</a>
             </div>
           </div>
-          <p className="text-[10px] text-muted-foreground mt-4 uppercase tracking-wider">
+          <p className="text-[10px] mt-4 uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
             For informational purposes only. Not financial advice.
           </p>
         </footer>

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Newsreader, IBM_Plex_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import Nav from "./components/Nav";
 import "./globals.css";
 
@@ -8,16 +8,9 @@ const inter = Inter({
   variable: "--font-inter"
 });
 
-const newsreader = Newsreader({ 
+const jetbrainsMono = JetBrains_Mono({ 
   subsets: ["latin"],
-  variable: "--font-newsreader",
-  style: ["normal", "italic"]
-});
-
-const ibmPlexMono = IBM_Plex_Mono({ 
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-ibm-mono"
+  variable: "--font-jetbrains"
 });
 
 export const metadata: Metadata = {
@@ -27,17 +20,31 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FCFCFB",
+  themeColor: "#FAFAF9",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html 
       lang="en" 
-      className={`${inter.variable} ${newsreader.variable} ${ibmPlexMono.variable} bg-background`} 
+      className={`${inter.variable} ${jetbrainsMono.variable} bg-[var(--background)]`} 
       suppressHydrationWarning
     >
-      <body className="min-h-screen flex flex-col antialiased font-sans">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const stored = localStorage.getItem('chainscore-theme');
+                if (stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-screen flex flex-col antialiased font-sans" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
         <Nav />
         {children}
       </body>
