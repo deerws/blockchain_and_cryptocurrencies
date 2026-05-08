@@ -3,62 +3,50 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback', system-ui, sans-serif;
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
+  --font-sans: 'Inter', 'Inter Fallback', system-ui, sans-serif;
+  --font-serif: 'Newsreader', 'Georgia', serif;
+  --font-mono: 'IBM Plex Mono', monospace;
   
-  /* Goldman Sachs Terminal Theme - Institutional Dark */
-  --color-background: #0a0a0b;
-  --color-foreground: #e8e8e8;
-  --color-card: #111113;
-  --color-card-foreground: #e8e8e8;
-  --color-muted: #71717a;
-  --color-muted-foreground: #a1a1aa;
-  --color-border: #27272a;
-  --color-accent: #18181b;
-  --color-accent-foreground: #fafafa;
+  /* ChainScore Institutional Light Theme */
+  --color-background: #FCFCFB;
+  --color-foreground: #111827;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #111827;
+  --color-muted: #F9FAFB;
+  --color-muted-foreground: #6B7280;
+  --color-border: #E5E7EB;
+  --color-border-subtle: #F3F4F6;
+  --color-accent: #F3F4F6;
+  --color-accent-foreground: #111827;
   
   /* Primary - Institutional Blue */
-  --color-primary: #3b82f6;
-  --color-primary-foreground: #ffffff;
+  --color-primary: #185FA5;
+  --color-primary-foreground: #FFFFFF;
   
   /* Semantic colors for data */
-  --color-positive: #22c55e;
-  --color-negative: #ef4444;
-  --color-warning: #f59e0b;
-  --color-info: #3b82f6;
+  --color-positive: #15803D;
+  --color-negative: #B91C1C;
+  --color-warning: #D97706;
+  --color-info: #185FA5;
   
-  --radius: 0.5rem;
+  --radius: 0.25rem;
 }
 
 /* CSS Variables for component use */
 :root {
-  --background: #0a0a0b;
-  --foreground: #e8e8e8;
-  --card: #111113;
-  --card-hover: #18181b;
-  --border: #27272a;
-  --border-subtle: #1f1f22;
-  --muted: #71717a;
-  --muted-foreground: #a1a1aa;
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --positive: #22c55e;
-  --negative: #ef4444;
-  --warning: #f59e0b;
-}
-
-/* Light mode overrides (if needed) */
-.light {
-  --background: #fafafa;
-  --foreground: #09090b;
-  --card: #ffffff;
-  --card-hover: #f4f4f5;
-  --border: #e4e4e7;
-  --border-subtle: #f4f4f5;
-  --muted: #71717a;
-  --muted-foreground: #52525b;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
+  --background: #FCFCFB;
+  --foreground: #111827;
+  --card: #FFFFFF;
+  --card-hover: #F9FAFB;
+  --border: #E5E7EB;
+  --border-subtle: #F3F4F6;
+  --muted: #6B7280;
+  --muted-foreground: #9CA3AF;
+  --primary: #185FA5;
+  --primary-hover: #1E4A7D;
+  --positive: #15803D;
+  --negative: #B91C1C;
+  --warning: #D97706;
 }
 
 * {
@@ -73,60 +61,64 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Terminal-style scrollbar */
+/* Minimal scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--background);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }
 
-/* Data grid lines */
-.data-grid {
-  background-image: 
-    linear-gradient(var(--border-subtle) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
-/* Glow effects for key metrics */
-.metric-glow {
-  box-shadow: 0 0 20px -5px var(--primary);
-}
-
-/* Terminal text effect */
-.terminal-text {
-  font-family: var(--font-mono);
+/* Editorial serif headlines */
+.headline-serif {
+  font-family: var(--font-serif);
+  font-weight: 400;
   letter-spacing: -0.02em;
 }
 
-/* Subtle scan line effect */
-.scan-lines::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.03) 2px,
-    rgba(0, 0, 0, 0.03) 4px
-  );
-  pointer-events: none;
+/* Data monospace */
+.data-mono {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  letter-spacing: -0.01em;
+}
+
+/* Subtle shadow for cards */
+.card-shadow {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+}
+
+/* Dense data table styling */
+.data-table {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.data-table th {
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+/* Institutional grid lines */
+.inst-grid {
+  background-image: linear-gradient(var(--border-subtle) 1px, transparent 1px);
+  background-size: 100% 32px;
 }

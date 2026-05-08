@@ -3,89 +3,70 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export default function Nav() {
-  const path = usePathname();
+const navItems = [
+  { label: "Dashboard", href: "/" },
+  { label: "Watchlist", href: "/watchlist" },
+  { label: "Alerts", href: "/alerts" },
+  { label: "Reports", href: "/reports" },
+  { label: "API", href: "/api-docs" },
+];
 
-  const links = [
-    { href: "/", label: "Terminal" },
-    { href: "/about", label: "Methodology" },
-  ];
+export default function Nav() {
+  const pathname = usePathname();
 
   return (
-    <header
-      className="border-b px-4 sm:px-6 h-14 flex items-center gap-6 sticky top-0 z-50"
-      style={{
-        background: "var(--background)",
-        borderColor: "var(--border)",
-      }}
-    >
-      {/* Logo */}
-      <Link href="/" className="flex items-center gap-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-[var(--positive)] animate-pulse" />
-          <span
-            className="font-semibold text-sm tracking-tight"
-            style={{ color: "var(--foreground)" }}
-          >
-            CHAINSCORE
-          </span>
-        </div>
-        <span
-          className="text-xs px-2 py-0.5 rounded font-mono"
-          style={{
-            background: "var(--card)",
-            color: "var(--muted)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          v1.0
-        </span>
-      </Link>
-
-      {/* Divider */}
-      <div className="w-px h-5" style={{ background: "var(--border)" }} />
-
-      {/* Nav links */}
-      <nav className="flex items-center gap-1">
-        {links.map(({ href, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className="px-3 py-1.5 rounded text-xs font-medium transition-colors"
-            style={{
-              color: path === href ? "var(--foreground)" : "var(--muted)",
-              background: path === href ? "var(--card)" : "transparent",
-            }}
-          >
-            {label}
+    <header className="sticky top-0 z-50 bg-background border-b border-border">
+      <div className="max-w-[1400px] mx-auto px-6">
+        <div className="flex items-center justify-between h-14">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-lg font-medium tracking-tight text-foreground">
+              Chain<span className="text-primary">Score</span>
+            </span>
           </Link>
-        ))}
-      </nav>
 
-      {/* Right side - Status indicators */}
-      <div className="ml-auto flex items-center gap-4">
-        <div className="hidden sm:flex items-center gap-4 text-xs font-mono" style={{ color: "var(--muted)" }}>
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--positive)]" />
-            <span>API Online</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>ETH Mainnet</span>
+          {/* Navigation */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`px-3 py-1.5 text-[13px] font-medium transition-colors rounded ${
+                    isActive
+                      ? "text-foreground bg-accent"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Wallet Identity Block */}
+          <div className="flex items-center gap-4">
+            <div className="hidden lg:flex items-center gap-3 text-right">
+              <div>
+                <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Analyzed 2 min ago
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 pl-4 border-l border-border">
+              {/* Avatar placeholder */}
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-xs font-medium text-primary">VB</span>
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-sm font-medium text-foreground">vitalik.eth</p>
+                <p className="text-[11px] text-muted-foreground font-mono">0xd8dA...6045</p>
+              </div>
+            </div>
           </div>
         </div>
-        <a
-          href="https://github.com/deerws/ChainScore"
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs font-medium px-3 py-1.5 rounded transition-colors"
-          style={{
-            color: "var(--muted)",
-            background: "var(--card)",
-            border: "1px solid var(--border)",
-          }}
-        >
-          GitHub
-        </a>
       </div>
     </header>
   );

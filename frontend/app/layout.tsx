@@ -1,25 +1,43 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Newsreader, IBM_Plex_Mono } from "next/font/google";
 import Nav from "./components/Nav";
 import "./globals.css";
 
-const geistSans = Geist({ subsets: ["latin"] });
-const geistMono = Geist_Mono({ subsets: ["latin"] });
+const inter = Inter({ 
+  subsets: ["latin"],
+  variable: "--font-inter"
+});
+
+const newsreader = Newsreader({ 
+  subsets: ["latin"],
+  variable: "--font-newsreader",
+  style: ["normal", "italic"]
+});
+
+const ibmPlexMono = IBM_Plex_Mono({ 
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-ibm-mono"
+});
 
 export const metadata: Metadata = {
-  title: "ChainScore | On-Chain Credit Intelligence",
+  title: "ChainScore | Wallet Credit Intelligence",
   description:
-    "Institutional-grade credit scoring for Ethereum wallets. Real-time risk assessment powered by on-chain behavioral analysis.",
+    "Institutional-grade on-chain credit risk analysis and behavioral scoring for Ethereum wallets.",
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0b",
+  themeColor: "#FCFCFB",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.className} ${geistMono.className} bg-background`} suppressHydrationWarning>
-      <body className="min-h-screen flex flex-col antialiased">
+    <html 
+      lang="en" 
+      className={`${inter.variable} ${newsreader.variable} ${ibmPlexMono.variable} bg-background`} 
+      suppressHydrationWarning
+    >
+      <body className="min-h-screen flex flex-col antialiased font-sans">
         <Nav />
         {children}
       </body>
