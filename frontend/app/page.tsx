@@ -271,17 +271,39 @@ export default function Home() {
         
         {/* ── HERO / REPORT TITLE ─────────────────────────────────────── */}
         <section className="mb-10">
-          <div className="flex items-center justify-between gap-8">
-            <div className="flex-1">
-              <h1 className="headline-serif text-4xl md:text-5xl mb-3">
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex-1 max-w-3xl">
+              <h1 className="headline-serif text-4xl md:text-5xl mb-2">
                 Wallet Credit Intelligence Report
               </h1>
-              <p className="text-lg mb-6" style={{ color: 'var(--muted)' }}>
+              <p className="text-lg mb-5" style={{ color: 'var(--muted)' }}>
                 On-chain credit risk analysis and behavioral scoring
               </p>
               
+              {/* Wallet Input - moved here */}
+              <div className="flex gap-3 mb-6">
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Enter wallet address (0x...)"
+                  className="flex-1 px-4 py-2.5 border rounded text-sm font-mono focus:outline-none focus:ring-1"
+                  style={{ 
+                    background: 'var(--card)', 
+                    borderColor: 'var(--border)',
+                    color: 'var(--foreground)',
+                  }}
+                />
+                <button 
+                  className="px-5 py-2.5 text-sm font-medium rounded hover:opacity-90 transition-opacity"
+                  style={{ background: 'var(--primary)', color: '#fff' }}
+                >
+                  Analyze
+                </button>
+              </div>
+              
               {/* Analyst Note */}
-              <div className="border p-4 rounded card-shadow max-w-2xl" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+              <div className="border p-4 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
                 <div className="flex items-start gap-3">
                   <div className="w-1 h-full rounded-full shrink-0" style={{ minHeight: "40px", background: 'var(--primary)' }} />
                   <div>
@@ -297,37 +319,13 @@ export default function Home() {
             </div>
             
             {/* Hero Illustration */}
-            <div className="hidden lg:block w-64 xl:w-80 shrink-0">
+            <div className="hidden lg:flex items-center justify-center w-56 xl:w-72 shrink-0">
               <img 
                 src="/hero-bull.png" 
                 alt="ChainScore Bull - Wall Street meets Blockchain"
-                className="w-full h-auto mix-blend-multiply dark:mix-blend-normal dark:invert dark:brightness-90"
+                className="w-full h-auto hero-bull"
               />
             </div>
-          </div>
-        </section>
-
-        {/* ── WALLET INPUT ────────────────────────────────────────────── */}
-        <section className="mb-10">
-          <div className="flex gap-3 max-w-xl">
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Enter wallet address (0x...)"
-              className="flex-1 px-4 py-2.5 border rounded text-sm font-mono focus:outline-none focus:ring-1"
-              style={{ 
-                background: 'var(--card)', 
-                borderColor: 'var(--border)',
-                color: 'var(--foreground)',
-              }}
-            />
-            <button 
-              className="px-5 py-2.5 text-sm font-medium rounded hover:opacity-90 transition-opacity"
-              style={{ background: 'var(--primary)', color: '#fff' }}
-            >
-              Analyze
-            </button>
           </div>
         </section>
 

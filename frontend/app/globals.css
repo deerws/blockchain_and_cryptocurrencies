@@ -164,7 +164,12 @@ body {
 .heatmap-3 { background: var(--primary); opacity: 0.7; }
 .heatmap-4 { background: var(--primary); opacity: 1; }
 
-/* Dark mode image invert for single-color illustrations */
-.dark .dark\:invert {
+/* Hero bull image - blend with background */
+.hero-bull {
+  mix-blend-mode: multiply;
+}
+
+.dark .hero-bull {
+  mix-blend-mode: screen;
   filter: invert(1);
 }
