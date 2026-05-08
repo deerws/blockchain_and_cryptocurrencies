@@ -1,28 +1,50 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import Nav from "./components/Nav";
 import "./globals.css";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const inter = Inter({ 
+  subsets: ["latin"],
+  variable: "--font-inter"
+});
+
+const jetbrainsMono = JetBrains_Mono({ 
+  subsets: ["latin"],
+  variable: "--font-jetbrains"
+});
 
 export const metadata: Metadata = {
-  title: "ChainScore — On-chain Credit Scoring",
+  title: "ChainScore | Wallet Credit Intelligence",
   description:
-    "Real-time credit scores for Ethereum wallets using on-chain behavioral data and Aave V2 liquidation history.",
+    "Institutional-grade on-chain credit risk analysis and behavioral scoring for Ethereum wallets.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#FAFAF9",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full`} suppressHydrationWarning>
+    <html 
+      lang="en" 
+      className={`${inter.variable} ${jetbrainsMono.variable} bg-[var(--background)]`} 
+      suppressHydrationWarning
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}`,
+            __html: `
+              (function() {
+                const stored = localStorage.getItem('chainscore-theme');
+                if (stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col antialiased">
+      <body className="min-h-screen flex flex-col antialiased font-sans" style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
         <Nav />
         {children}
       </body>

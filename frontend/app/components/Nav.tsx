@@ -2,90 +2,110 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 
-function useTheme() {
-  const [dark, setDark] = useState(false);
+const navItems = [
+  { label: "Dashboard", href: "/" },
+  { label: "Watchlist", href: "/watchlist" },
+  { label: "Alerts", href: "/alerts" },
+  { label: "Reports", href: "/reports" },
+  { label: "API", href: "/api-docs" },
+];
+
+function ThemeToggle() {
+  const [isDark, setIsDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
-    setDark(document.documentElement.classList.contains("dark"));
+    setMounted(true);
+    setIsDark(document.documentElement.classList.contains('dark'));
   }, []);
-  const toggle = useCallback(() => {
-    setDark((d) => {
-      const next = !d;
-      document.documentElement.classList.toggle("dark", next);
-      localStorage.setItem("theme", next ? "dark" : "light");
-      return next;
-    });
-  }, []);
-  return { dark, toggle };
+
+  const toggleTheme = () => {
+    const newIsDark = !isDark;
+    setIsDark(newIsDark);
+    if (newIsDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('chainscore-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('chainscore-theme', 'light');
+    }
+  };
+
+  if (!mounted) {
+    return <div className="w-9 h-9" />;
+  }
+
+  return (
+    <button
+      onClick={toggleTheme}
+      className="w-9 h-9 flex items-center justify-center rounded border border-[var(--border)] hover:bg-[var(--card-hover)] transition-colors"
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {isDark ? (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      )}
+    </button>
+  );
 }
 
 export default function Nav() {
-  const { dark, toggle } = useTheme();
-  const path = usePathname();
-
-  const links = [
-    { href: "/",       label: "Score" },
-    { href: "/about",  label: "About" },
-  ];
+  const pathname = usePathname();
 
   return (
-    <header
-      className="border-b px-4 sm:px-6 py-3 flex items-center gap-3 sticky top-0 z-10 backdrop-blur-sm"
-      style={{
-        background: "color-mix(in srgb, var(--card) 90%, transparent)",
-        borderColor: "var(--border)",
-      }}
-    >
-      {/* Logo */}
-      <Link href="/" className="flex items-center gap-2.5 shrink-0">
-        <div
-          className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center"
-          style={{ background: "#185FA5" }}
-        >
-          <span className="text-white font-bold text-sm">C</span>
-        </div>
-        <span className="font-semibold text-base sm:text-lg" style={{ color: "var(--fg)" }}>
-          ChainScore
-        </span>
-      </Link>
-
-      {/* Nav links */}
-      <nav className="flex items-center gap-1 ml-4">
-        {links.map(({ href, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-            style={{
-              color: path === href ? "var(--fg)" : "var(--muted)",
-              background: path === href ? "var(--border)" : "transparent",
-            }}
-          >
-            {label}
+    <header className="sticky top-0 z-50 border-b border-[var(--border)]" style={{ background: 'var(--background)' }}>
+      <div className="max-w-[1400px] mx-auto px-6">
+        <div className="flex items-center justify-between h-14">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-lg font-mono font-bold tracking-tight">
+              Chain<span style={{ color: 'var(--primary)' }}>Score</span>
+            </span>
           </Link>
-        ))}
-      </nav>
 
-      {/* Right side */}
-      <div className="ml-auto flex items-center gap-2 sm:gap-3">
-        <a
-          href="https://github.com/deerws/ChainScore"
-          target="_blank"
-          rel="noreferrer"
-          className="hidden sm:block text-xs font-medium transition-opacity hover:opacity-70"
-          style={{ color: "var(--muted)" }}
-        >
-          GitHub ↗
-        </a>
-        <button
-          onClick={toggle}
-          className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg border flex items-center justify-center transition-opacity hover:opacity-70"
-          style={{ borderColor: "var(--border)", background: "var(--bg)", color: "var(--muted)" }}
-          aria-label="Toggle dark mode"
-        >
-          {dark ? "☀️" : "🌙"}
-        </button>
+          {/* Navigation */}
+          <nav className="hidden md:flex items-center gap-1">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`px-3 py-1.5 text-[13px] font-medium transition-colors rounded ${
+                    isActive
+                      ? "bg-[var(--card-hover)]"
+                      : "hover:bg-[var(--card-hover)]"
+                  }`}
+                  style={{ color: isActive ? 'var(--foreground)' : 'var(--muted)' }}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Right side */}
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            
+            <div className="flex items-center gap-2 pl-3 border-l border-[var(--border)]">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'var(--primary)', opacity: 0.1 }}>
+                <span className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>VB</span>
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-sm font-medium">vitalik.eth</p>
+                <p className="text-[11px] font-mono" style={{ color: 'var(--muted)' }}>0xd8dA...6045</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
   );

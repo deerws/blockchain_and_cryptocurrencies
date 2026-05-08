@@ -1,454 +1,597 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell,
+  ReferenceLine,
 } from "recharts";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const API_KEY  = process.env.NEXT_PUBLIC_API_KEY  ?? "";
+// ── Mock Data ──────────────────────────────────────────────────────────────
 
-// ── Types ──────────────────────────────────────────────────────────────────
-
-type RiskTier = "very_low" | "low" | "medium" | "high" | "very_high";
-
-interface ShapFactor {
-  feature: string;
-  shap_value: number;
-  direction: "increases_risk" | "decreases_risk";
-}
-
-interface ScoreResponse {
-  wallet_address: string;
-  score: number;
-  risk_tier: RiskTier;
-  probability_of_default: number;
-  top_factors: ShapFactor[];
-  model_version: string;
-  scored_at: string;
-  score_valid_until: string;
-}
-
-// ── Config ─────────────────────────────────────────────────────────────────
-
-const TIER_CONFIG: Record<RiskTier, {
-  label: string; color: string; bg: string; border: string; hex: string;
-}> = {
-  very_low:  { label: "Very Low",  color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950", border: "border-emerald-300 dark:border-emerald-700", hex: "#10b981" },
-  low:       { label: "Low",       color: "text-green-600",   bg: "bg-green-50   dark:bg-green-950",   border: "border-green-300   dark:border-green-700",   hex: "#22c55e" },
-  medium:    { label: "Medium",    color: "text-yellow-600",  bg: "bg-yellow-50  dark:bg-yellow-950",  border: "border-yellow-300  dark:border-yellow-700",  hex: "#eab308" },
-  high:      { label: "High",      color: "text-orange-600",  bg: "bg-orange-50  dark:bg-orange-950",  border: "border-orange-300  dark:border-orange-700",  hex: "#f97316" },
-  very_high: { label: "Very High", color: "text-red-600",     bg: "bg-red-50     dark:bg-red-950",     border: "border-red-300     dark:border-red-700",     hex: "#ef4444" },
+const MOCK_WALLET = {
+  address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+  ens: "vitalik.eth",
+  score: 782,
+  riskTier: "low" as const,
+  pdEstimate: 0.183,
+  scoreValidDays: 30,
+  walletAge: 2847,
+  activeProtocols: 12,
+  totalRepaid: 4250000,
+  totalBorrowed: 3890000,
+  smartMoneyPercentile: 94,
 };
 
-// ── Semicircle gauge ───────────────────────────────────────────────────────
+const SHAP_FACTORS = [
+  { feature: "wallet_age_days", value: 0.142, impact: "positive", interpretation: "Long on-chain history indicates reliability" },
+  { feature: "repay_to_borrow_ratio", value: 0.098, impact: "positive", interpretation: "Consistent repayment behavior above 1.0x" },
+  { feature: "protocols_used", value: 0.067, impact: "positive", interpretation: "Diversified protocol engagement" },
+  { feature: "recent_tx_ratio", value: -0.034, impact: "negative", interpretation: "Recent activity spike warrants monitoring" },
+  { feature: "aave_borrow_count", value: 0.052, impact: "positive", interpretation: "Established Aave borrowing track record" },
+];
 
-function ScoreGauge({ score, tier }: { score: number; tier: RiskTier }) {
-  const R = 110;
-  const cx = 150;
-  const cy = 145;
-  const arcLen = Math.PI * R;
-  const offset = arcLen - (score / 1000) * arcLen;
-  const tierHex = TIER_CONFIG[tier].hex;
+const PROTOCOL_EXPOSURE = [
+  { protocol: "Aave", exposure: "$2.4M", netUsage: "+$890K", riskSignal: "Low" },
+  { protocol: "Compound", exposure: "$1.1M", netUsage: "+$340K", riskSignal: "Low" },
+  { protocol: "MakerDAO", exposure: "$680K", netUsage: "+$120K", riskSignal: "Medium" },
+  { protocol: "Uniswap", exposure: "$450K", netUsage: "-$45K", riskSignal: "Low" },
+  { protocol: "Lido", exposure: "$2.1M", netUsage: "+$1.2M", riskSignal: "Low" },
+];
+
+const ACTIVITY_HEATMAP = Array.from({ length: 90 }, (_, i) => ({
+  day: i,
+  value: Math.floor(Math.random() * 5),
+}));
+
+const TRANSACTION_HISTORY = [
+  { month: "Jun", value: 12 },
+  { month: "Jul", value: 18 },
+  { month: "Aug", value: 24 },
+  { month: "Sep", value: 15 },
+  { month: "Oct", value: 32 },
+  { month: "Nov", value: 28 },
+  { month: "Dec", value: 45 },
+  { month: "Jan", value: 38 },
+  { month: "Feb", value: 52 },
+  { month: "Mar", value: 41 },
+  { month: "Apr", value: 36 },
+  { month: "May", value: 48 },
+];
+
+const RECENT_TRANSACTIONS = [
+  { date: "May 7, 2026", protocol: "Aave", type: "Repay", amount: "125 ETH", usd: "$312,500" },
+  { date: "May 5, 2026", protocol: "Uniswap", type: "Swap", amount: "50 ETH", usd: "$125,000" },
+  { date: "May 3, 2026", protocol: "Lido", type: "Stake", amount: "200 ETH", usd: "$500,000" },
+  { date: "May 1, 2026", protocol: "Compound", type: "Borrow", amount: "80 ETH", usd: "$200,000" },
+  { date: "Apr 28, 2026", protocol: "MakerDAO", type: "Repay", amount: "45 ETH", usd: "$112,500" },
+];
+
+// ── Semicircle Gauge ───────────────────────────────────────────────────────
+
+function ScoreGauge({ score }: { score: number }) {
+  const percentage = score / 1000;
+  const angle = percentage * 180;
+  
+  // Risk band colors - work in both themes
+  const bands = [
+    { className: "gauge-critical", start: 0, end: 20 },
+    { className: "gauge-poor", start: 20, end: 40 },
+    { className: "gauge-fair", start: 40, end: 60 },
+    { className: "gauge-good", start: 60, end: 80 },
+    { className: "gauge-excellent", start: 80, end: 100 },
+  ];
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <svg viewBox="0 0 300 165" className="w-56 sm:w-64">
-        <defs>
-          <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor="#ef4444" />
-            <stop offset="40%"  stopColor="#eab308" />
-            <stop offset="100%" stopColor="#10b981" />
-          </linearGradient>
-        </defs>
+    <div className="relative w-full max-w-[280px] mx-auto">
+      <svg viewBox="0 0 200 120" className="w-full">
+        {/* Background arc segments */}
+        {bands.map((band, i) => {
+          const startAngle = (band.start / 100) * 180;
+          const endAngle = (band.end / 100) * 180;
+          const startRad = (startAngle - 180) * (Math.PI / 180);
+          const endRad = (endAngle - 180) * (Math.PI / 180);
+          const r = 80;
+          const cx = 100;
+          const cy = 100;
+          
+          const x1 = cx + r * Math.cos(startRad);
+          const y1 = cy + r * Math.sin(startRad);
+          const x2 = cx + r * Math.cos(endRad);
+          const y2 = cy + r * Math.sin(endRad);
+          
+          return (
+            <path
+              key={i}
+              d={`M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
+              fill="none"
+              stroke="currentColor"
+              className={band.className}
+              strokeWidth="12"
+              strokeLinecap="butt"
+              opacity={0.25}
+            />
+          );
+        })}
+        
+        {/* Active arc */}
         <path
-          d={`M ${cx - R} ${cy} A ${R} ${R} 0 0 1 ${cx + R} ${cy}`}
-          fill="none" stroke="currentColor" strokeWidth="18" strokeLinecap="round"
-          className="text-gray-200 dark:text-slate-700"
+          d={`M 20 100 A 80 80 0 ${angle > 90 ? 1 : 0} 1 ${100 + 80 * Math.cos((angle - 180) * Math.PI / 180)} ${100 + 80 * Math.sin((angle - 180) * Math.PI / 180)}`}
+          fill="none"
+          stroke="currentColor"
+          className="gauge-excellent"
+          strokeWidth="12"
+          strokeLinecap="round"
         />
-        <path
-          d={`M ${cx - R} ${cy} A ${R} ${R} 0 0 1 ${cx + R} ${cy}`}
-          fill="none" stroke="url(#g)" strokeWidth="18" strokeLinecap="round"
-          strokeDasharray={`${arcLen}`} strokeDashoffset={offset}
-          style={{ transition: "stroke-dashoffset 0.8s ease" }}
-        />
-        <text x={cx} y={cy - 10} textAnchor="middle"
-          style={{ fill: tierHex, fontSize: 46, fontWeight: 800 }}>
+        
+        {/* Center text */}
+        <text x="100" y="85" textAnchor="middle" className="headline-serif text-4xl" fill="currentColor">
           {score}
         </text>
-        <text x={cx} y={cy + 16} textAnchor="middle"
-          style={{ fill: "#94a3b8", fontSize: 13 }}>
-          out of 1000
+        <text x="100" y="105" textAnchor="middle" className="text-xs" style={{ fill: 'var(--muted)' }}>
+          / 1000
         </text>
-        <text x={cx - R + 4} y={cy + 22} style={{ fill: "#94a3b8", fontSize: 11 }}>0</text>
-        <text x={cx + R - 16} y={cy + 22} style={{ fill: "#94a3b8", fontSize: 11 }}>1000</text>
       </svg>
     </div>
   );
 }
 
-// ── Risk spectrum ──────────────────────────────────────────────────────────
+// ── SHAP Feature Importance ────────────────────────────────────────────────
 
-function RiskSpectrum({ current }: { current: RiskTier }) {
+function ShapFeatureChart() {
+  const data = SHAP_FACTORS.map(f => ({
+    name: f.feature,
+    value: f.value,
+    impact: f.impact,
+  }));
+
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>Risk Spectrum</span>
-      <div className="flex rounded-full overflow-hidden h-3">
-        {(["very_high", "high", "medium", "low", "very_low"] as RiskTier[]).map((t) => (
-          <div key={t} className="flex-1 transition-all duration-300" style={{
-            background: TIER_CONFIG[t].hex,
-            opacity: current === t ? 1 : 0.22,
-            transform: current === t ? "scaleY(1.5)" : "scaleY(1)",
-          }} />
-        ))}
-      </div>
-      <div className="flex justify-between text-xs" style={{ color: "var(--muted)" }}>
-        <span>Highest Risk</span>
-        <span>Lowest Risk</span>
-      </div>
-    </div>
+    <ResponsiveContainer width="100%" height={200}>
+      <BarChart data={data} layout="vertical" margin={{ left: 0, right: 20, top: 0, bottom: 0 }}>
+        <XAxis 
+          type="number" 
+          domain={[-0.1, 0.2]}
+          tick={{ fontSize: 10, fill: "var(--muted)" }}
+          axisLine={{ stroke: "var(--border)" }}
+          tickLine={false}
+        />
+        <YAxis 
+          type="category" 
+          dataKey="name" 
+          width={130}
+          tick={{ fontSize: 10, fill: "var(--muted)", fontFamily: "var(--font-mono)" }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <ReferenceLine x={0} stroke="var(--border)" />
+        <Tooltip
+          formatter={(v) => [Number(v).toFixed(3), "Impact"]}
+          contentStyle={{
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            borderRadius: 4,
+            fontSize: 11,
+            color: "var(--foreground)",
+          }}
+        />
+        <Bar dataKey="value" barSize={16}>
+          {data.map((d, i) => (
+            <Cell key={i} fill={d.impact === "positive" ? "var(--primary)" : "var(--negative)"} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
   );
 }
 
-// ── SHAP chart ─────────────────────────────────────────────────────────────
+// ── Activity Heatmap ───────────────────────────────────────────────────────
 
-function ShapChart({ factors }: { factors: ShapFactor[] }) {
-  const data = [...factors]
-    .sort((a, b) => Math.abs(b.shap_value) - Math.abs(a.shap_value))
-    .map((f) => ({
-      name: f.feature.replace(/_/g, " "),
-      value: parseFloat(f.shap_value.toFixed(3)),
-      direction: f.direction,
-    }));
+function ActivityHeatmap() {
+  const weeks = 13;
+  const days = 7;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-sm font-semibold" style={{ color: "var(--fg)" }}>Top Risk Factors</h2>
-        <span className="text-xs px-2 py-0.5 rounded-full"
-          style={{ background: "var(--border)", color: "var(--muted)" }}>
-          SHAP · LightGBM
-        </span>
-      </div>
-
-      <ResponsiveContainer width="100%" height={data.length * 38 + 24}>
-        <BarChart data={data} layout="vertical" margin={{ left: 4, right: 28, top: 4, bottom: 4 }}>
-          <XAxis type="number" domain={["auto", "auto"]}
-            tick={{ fontSize: 10, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
-          <YAxis type="category" dataKey="name" width={120}
-            tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
-          <Tooltip
-            formatter={(v) => [v != null ? Number(v).toFixed(3) : "—", "SHAP value"]}
-            contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
-            labelStyle={{ color: "var(--fg)", fontWeight: 600 }}
-          />
-          <ReferenceLine x={0} stroke="var(--border)" />
-          <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={16}>
-            {data.map((d, i) => (
-              <Cell key={i} fill={d.direction === "increases_risk" ? "#f97316" : "#10b981"} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-
-      <div className="flex gap-4 text-xs" style={{ color: "var(--muted)" }}>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-orange-400 inline-block" /> Increases risk
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" /> Decreases risk
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ── Analyst insights ───────────────────────────────────────────────────────
-
-function AnalystCard({ result }: { result: ScoreResponse }) {
-  const pd = result.probability_of_default;
-  const tier = TIER_CONFIG[result.risk_tier];
-
-  const grade =
-    result.score >= 800 ? "Investment Grade (AAA–A)" :
-    result.score >= 650 ? "Investment Grade (BBB)" :
-    result.score >= 500 ? "Sub-Investment Grade (BB)" :
-    result.score >= 300 ? "Speculative Grade (B)" :
-                          "Distressed / CCC";
-
-  const interpretation: Record<RiskTier, string> = {
-    very_low:  "Strong repayment patterns. PD below 20% — suitable for most DeFi lending protocols with standard collateral requirements.",
-    low:       "Solid credit profile with low default probability. Comparable to an investment-grade borrower in traditional credit markets.",
-    medium:    "Moderate credit risk. On-chain behavior suggests some exposure. Lenders may require higher collateral ratios or interest spreads.",
-    high:      "Elevated default risk. Behavioral patterns consistent with historical Aave V2 liquidation events. Use with caution.",
-    very_high: "High probability of default. On-chain signals strongly resemble wallets that were liquidated on Aave V2. Not recommended for unsecured exposure.",
-  };
-
-  return (
-    <div className="rounded-2xl border p-5 flex flex-col gap-4"
-      style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-      <h2 className="text-sm font-semibold" style={{ color: "var(--fg)" }}>Analyst Insights</h2>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="rounded-xl p-4 flex flex-col gap-1" style={{ background: "var(--bg)" }}>
-          <span className="text-xs" style={{ color: "var(--muted)" }}>Expected defaults per 100 similar wallets</span>
-          <span className="text-3xl font-bold" style={{ color: tier.hex }}>
-            {Math.round(pd * 100)}
-          </span>
-          <span className="text-xs" style={{ color: "var(--muted)" }}>out of 100</span>
-        </div>
-
-        <div className="rounded-xl p-4 flex flex-col gap-1" style={{ background: "var(--bg)" }}>
-          <span className="text-xs" style={{ color: "var(--muted)" }}>Credit grade equivalent</span>
-          <span className="text-sm font-semibold mt-1" style={{ color: "var(--fg)" }}>{grade}</span>
-        </div>
-      </div>
-
-      <div className={`rounded-xl p-4 border ${tier.border} ${tier.bg}`}>
-        <p className={`text-sm leading-relaxed ${tier.color}`}>
-          <strong>{tier.label} Risk — </strong>
-          {interpretation[result.risk_tier]}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ── Recent searches ────────────────────────────────────────────────────────
-
-function RecentSearches({ onSelect }: { onSelect: (addr: string) => void }) {
-  const [recents, setRecents] = useState<string[]>([]);
-
-  useEffect(() => {
-    try { setRecents(JSON.parse(localStorage.getItem("cs_recents") ?? "[]")); }
-    catch { /* noop */ }
-  }, []);
-
-  if (!recents.length) return null;
-
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="text-xs font-medium" style={{ color: "var(--muted)" }}>Recent</span>
-      <div className="flex flex-wrap gap-2">
-        {recents.map((addr) => (
-          <button key={addr} onClick={() => onSelect(addr)}
-            className="font-mono text-xs px-3 py-1.5 rounded-lg border transition-colors hover:border-blue-400"
-            style={{ background: "var(--card)", borderColor: "var(--border)", color: "var(--muted)" }}>
-            {addr.slice(0, 6)}…{addr.slice(-4)}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function saveRecent(addr: string) {
-  try {
-    const prev: string[] = JSON.parse(localStorage.getItem("cs_recents") ?? "[]");
-    localStorage.setItem("cs_recents", JSON.stringify(
-      [addr, ...prev.filter((a) => a !== addr)].slice(0, 5)
-    ));
-  } catch { /* noop */ }
-}
-
-// ── Skeleton ───────────────────────────────────────────────────────────────
-
-function Skeleton() {
-  return (
-    <div className="w-full max-w-2xl flex flex-col gap-4 animate-pulse">
-      {[160, 200].map((h) => (
-        <div key={h} className="rounded-2xl border p-6" style={{ height: h, background: "var(--card)", borderColor: "var(--border)" }}>
-          <div className="h-full rounded-xl" style={{ background: "var(--border)" }} />
+    <div className="flex gap-1">
+      {Array.from({ length: weeks }, (_, week) => (
+        <div key={week} className="flex flex-col gap-1">
+          {Array.from({ length: days }, (_, day) => {
+            const index = week * 7 + day;
+            const value = ACTIVITY_HEATMAP[index]?.value ?? 0;
+            return (
+              <div
+                key={day}
+                className={`w-3 h-3 rounded-sm heatmap-${value}`}
+                style={{
+                  backgroundColor: value === 0 ? 'var(--border)' : undefined,
+                  opacity: value === 0 ? 0.5 : 1,
+                }}
+              />
+            );
+          })}
         </div>
       ))}
     </div>
   );
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
+// ── Transaction Line Chart ─────────────────────────────────────────────────
+
+function TransactionChart() {
+  return (
+    <ResponsiveContainer width="100%" height={160}>
+      <LineChart data={TRANSACTION_HISTORY} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
+        <XAxis 
+          dataKey="month" 
+          tick={{ fontSize: 10, fill: "var(--muted)" }}
+          axisLine={{ stroke: "var(--border)" }}
+          tickLine={false}
+        />
+        <YAxis 
+          tick={{ fontSize: 10, fill: "var(--muted)" }}
+          axisLine={false}
+          tickLine={false}
+          width={30}
+        />
+        <Tooltip
+          contentStyle={{
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            borderRadius: 4,
+            fontSize: 11,
+            color: "var(--foreground)",
+          }}
+        />
+        <Line 
+          type="monotone" 
+          dataKey="value" 
+          stroke="var(--primary)" 
+          strokeWidth={1.5}
+          dot={false}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ── Page Component ─────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [address, setAddress] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult]   = useState<ScoreResponse | null>(null);
-  const [error, setError]     = useState<string | null>(null);
-  const [copied, setCopied]   = useState(false);
-
-  async function handleScore(addr?: string) {
-    const target = (addr ?? address).trim();
-    if (!target.startsWith("0x") || target.length !== 42) {
-      setError("Enter a valid Ethereum address (0x… 42 chars).");
-      return;
-    }
-    if (addr) setAddress(addr);
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    try {
-      const res = await fetch(`${API_URL}/v1/score`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(API_KEY ? { "X-API-Key": API_KEY } : {}),
-        },
-        body: JSON.stringify({ wallet_address: target, include_shap: true }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.detail ?? `API error ${res.status}`);
-      }
-      const data: ScoreResponse = await res.json();
-      setResult(data);
-      saveRecent(target);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Unexpected error.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function copyResult() {
-    if (!result) return;
-    navigator.clipboard.writeText(
-      `ChainScore · ${result.wallet_address}\nScore: ${result.score}/1000  |  Risk: ${result.risk_tier.replace(/_/g, " ")}  |  PD: ${(result.probability_of_default * 100).toFixed(1)}%  |  Valid: ${result.score_valid_until}`
-    );
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  const tier = result ? TIER_CONFIG[result.risk_tier] : null;
+  const [address, setAddress] = useState(MOCK_WALLET.address);
 
   return (
-    <main className="flex flex-col flex-1">
-      <div className="flex flex-col items-center px-4 py-10 sm:py-14 gap-8 sm:gap-10">
-
-        {/* Hero */}
-        <div className="text-center max-w-2xl flex flex-col gap-4">
-          <div className="inline-flex items-center gap-2 self-center px-3 py-1 rounded-full border text-xs font-medium"
-            style={{ borderColor: "var(--border)", color: "var(--muted)", background: "var(--card)" }}>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            Live · LightGBM · 49,748 Aave V2 liquidation labels
-          </div>
-          <h1 className="text-3xl sm:text-5xl font-bold leading-tight" style={{ color: "var(--fg)" }}>
-            Credit score any<br className="hidden sm:block" /> Ethereum wallet
-          </h1>
-          <p className="text-sm sm:text-base" style={{ color: "var(--muted)" }}>
-            Returns a 0–1000 score, probability of default, and SHAP-driven risk factors —
-            powered by on-chain behavioral analysis of Aave V2 borrowers.
-          </p>
-        </div>
-
-        {/* Search */}
-        <div className="w-full max-w-2xl flex flex-col gap-3">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleScore()}
-              placeholder="0x… wallet address"
-              className="flex-1 min-w-0 rounded-xl border px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
-              style={{ background: "var(--card)", borderColor: "var(--border)", color: "var(--fg)" }}
-            />
-            <button
-              onClick={() => handleScore()}
-              disabled={loading}
-              className="px-4 sm:px-6 py-3 rounded-xl text-white font-semibold text-sm disabled:opacity-60 shrink-0"
-              style={{ background: "#185FA5" }}
-            >
-              {loading ? "…" : "Score →"}
-            </button>
-          </div>
-          <RecentSearches onSelect={(a) => handleScore(a)} />
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="w-full max-w-2xl rounded-xl border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950 px-4 py-3 text-red-700 dark:text-red-400 text-sm">
-            {error}
-          </div>
-        )}
-
-        {loading && <Skeleton />}
-
-        {/* Result */}
-        {result && tier && !loading && (
-          <div className="w-full max-w-2xl flex flex-col gap-4">
-
-            {/* Score card */}
-            <div className="rounded-2xl border p-4 sm:p-6 flex flex-col gap-5 shadow-sm"
-              style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-              {/* Wallet + actions */}
-              <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="text-xs" style={{ color: "var(--muted)" }}>Wallet</span>
-                  <span className="text-xs sm:text-sm font-mono truncate max-w-[200px] sm:max-w-none"
-                    style={{ color: "var(--fg)" }}>
-                    {result.wallet_address}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={copyResult}
-                    className="px-3 py-1 rounded-lg border text-xs font-medium hover:opacity-70"
-                    style={{ borderColor: "var(--border)", color: "var(--muted)", background: "var(--bg)" }}>
-                    {copied ? "Copied ✓" : "Copy"}
-                  </button>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${tier.color} ${tier.bg} ${tier.border}`}>
-                    {tier.label} Risk
-                  </span>
+    <main className="min-h-screen" style={{ background: 'var(--background)' }}>
+      <div className="max-w-[1400px] mx-auto px-6 py-8">
+        
+        {/* ── HERO / REPORT TITLE ─────────────────────────────────────── */}
+        <section className="mb-10">
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex-1 max-w-3xl">
+              <h1 className="headline-serif text-4xl md:text-5xl mb-2">
+                Wallet Credit Intelligence Report
+              </h1>
+              <p className="text-lg mb-5" style={{ color: 'var(--muted)' }}>
+                On-chain credit risk analysis and behavioral scoring
+              </p>
+              
+              {/* Wallet Input - moved here */}
+              <div className="flex gap-3 mb-6">
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Enter wallet address (0x...)"
+                  className="flex-1 px-4 py-2.5 border rounded text-sm font-mono focus:outline-none focus:ring-1"
+                  style={{ 
+                    background: 'var(--card)', 
+                    borderColor: 'var(--border)',
+                    color: 'var(--foreground)',
+                  }}
+                />
+                <button 
+                  className="px-5 py-2.5 text-sm font-medium rounded hover:opacity-90 transition-opacity"
+                  style={{ background: 'var(--primary)', color: '#fff' }}
+                >
+                  Analyze
+                </button>
+              </div>
+              
+              {/* Analyst Note */}
+              <div className="border p-4 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                <div className="flex items-start gap-3">
+                  <div className="w-1 h-full rounded-full shrink-0" style={{ minHeight: "40px", background: 'var(--primary)' }} />
+                  <div>
+                    <p className="text-xs uppercase tracking-wider mb-1 font-medium" style={{ color: 'var(--muted)' }}>
+                      Analyst Note
+                    </p>
+                    <p className="text-sm leading-relaxed">
+                      Wallet exhibits disciplined leverage behavior across Aave and Compound with low short-term liquidation probability. Consistent repayment patterns suggest institutional-grade risk management practices.
+                    </p>
+                  </div>
                 </div>
               </div>
+            </div>
+            
+            {/* Hero Illustration */}
+            <div className="hidden lg:flex items-center justify-center w-56 xl:w-72 shrink-0">
+              <img 
+                src="/hero-bull.png" 
+                alt="ChainScore Bull - Wall Street meets Blockchain"
+                className="w-full h-auto hero-bull"
+              />
+            </div>
+          </div>
+        </section>
 
-              <ScoreGauge score={result.score} tier={result.risk_tier} />
-              <RiskSpectrum current={result.risk_tier} />
+        {/* ── CREDIT SCORE SECTION (Two columns) ──────────────────────── */}
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+          {/* LEFT: Score Gauge */}
+          <div className="border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-xs uppercase tracking-wider mb-6 font-medium" style={{ color: 'var(--muted)' }}>
+              Credit Score
+            </h2>
+            <ScoreGauge score={MOCK_WALLET.score} />
+            <div className="flex justify-center gap-4 mt-4 text-[10px] uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: 'var(--negative)' }} /> High</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: 'var(--warning)' }} /> Med-High</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: '#CA8A04' }} /> Medium</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: 'var(--primary)' }} /> Low</span>
+              <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: 'var(--positive)' }} /> V.Low</span>
+            </div>
+          </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-                {[
-                  { label: "Prob. Default", value: `${(result.probability_of_default * 100).toFixed(1)}%` },
-                  { label: "Model",         value: result.model_version },
-                  { label: "Valid until",   value: result.score_valid_until },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex flex-col items-center gap-1 p-2 sm:p-3 rounded-xl"
-                    style={{ background: "var(--bg)" }}>
-                    <span className="text-[10px] sm:text-xs text-center" style={{ color: "var(--muted)" }}>{label}</span>
-                    <span className="text-xs sm:text-sm font-bold text-center" style={{ color: "var(--fg)" }}>{value}</span>
+          {/* RIGHT: KPI Cards */}
+          <div className="flex flex-col gap-4">
+            {/* Top row - main metrics */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="border p-4 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--muted)' }}>Risk Tier</p>
+                <p className="text-xl font-medium" style={{ color: 'var(--positive)' }}>Low</p>
+              </div>
+              <div className="border p-4 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--muted)' }}>PD Estimate</p>
+                <p className="text-xl font-medium">{(MOCK_WALLET.pdEstimate * 100).toFixed(1)}%</p>
+              </div>
+              <div className="border p-4 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+                <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--muted)' }}>Valid For</p>
+                <p className="text-xl font-medium">{MOCK_WALLET.scoreValidDays}d</p>
+              </div>
+            </div>
+
+            {/* Key stats table */}
+            <div className="border p-4 rounded card-shadow flex-1" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+              <p className="text-[10px] uppercase tracking-wider mb-3" style={{ color: 'var(--muted)' }}>Key Statistics</p>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--muted)' }}>Wallet Age</span>
+                  <span className="font-mono">{MOCK_WALLET.walletAge.toLocaleString()} days</span>
+                </div>
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--muted)' }}>Active Protocols</span>
+                  <span className="font-mono">{MOCK_WALLET.activeProtocols}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--muted)' }}>Total Repaid</span>
+                  <span className="font-mono">${(MOCK_WALLET.totalRepaid / 1000000).toFixed(2)}M</span>
+                </div>
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--muted)' }}>Total Borrowed</span>
+                  <span className="font-mono">${(MOCK_WALLET.totalBorrowed / 1000000).toFixed(2)}M</span>
+                </div>
+                <div className="flex justify-between">
+                  <span style={{ color: 'var(--muted)' }}>Smart Money Percentile</span>
+                  <span className="font-mono" style={{ color: 'var(--primary)' }}>{MOCK_WALLET.smartMoneyPercentile}th</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── SHAP FEATURE IMPORTANCE ─────────────────────────────────── */}
+        <section className="mb-10">
+          <div className="border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-sm font-medium mb-1">{"What's Driving This Score?"}</h2>
+                <p className="text-xs" style={{ color: 'var(--muted)' }}>SHAP-based feature importance analysis</p>
+              </div>
+              <span className="text-[10px] uppercase tracking-wider px-2 py-1 rounded" style={{ color: 'var(--muted)', background: 'var(--border)' }}>
+                ML Explainability
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ShapFeatureChart />
+              
+              <div className="space-y-3">
+                {SHAP_FACTORS.map((factor, i) => (
+                  <div key={i} className="flex items-start gap-3 text-sm">
+                    <span 
+                      className="w-2 h-2 rounded-full mt-1.5 shrink-0"
+                      style={{ background: factor.impact === "positive" ? "var(--primary)" : "var(--negative)" }}
+                    />
+                    <div>
+                      <span className="font-mono text-xs" style={{ color: 'var(--muted)' }}>{factor.feature}</span>
+                      <p>{factor.interpretation}</p>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Analyst insights */}
-            <AnalystCard result={result} />
-
-            {/* SHAP chart */}
-            {result.top_factors.length > 0 && (
-              <div className="rounded-2xl border p-4 sm:p-6 shadow-sm"
-                style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-                <ShapChart factors={result.top_factors} />
-                <p className="text-xs mt-4" style={{ color: "var(--muted)" }}>
-                  SHAP values measure each feature&apos;s marginal contribution to the prediction.
-                  Positive = pushes toward default; negative = away from default.
-                </p>
-              </div>
-            )}
-
-            <p className="text-xs text-center pb-2" style={{ color: "var(--muted)" }}>
-              Research prototype · Not financial advice · Based on historical on-chain patterns
-            </p>
+            <div className="flex gap-6 mt-6 pt-4 border-t text-xs" style={{ borderColor: 'var(--border)' }}>
+              <span className="flex items-center gap-2" style={{ color: 'var(--muted)' }}>
+                <span className="w-3 h-1 rounded" style={{ background: 'var(--primary)' }} /> Positive Impact
+              </span>
+              <span className="flex items-center gap-2" style={{ color: 'var(--muted)' }}>
+                <span className="w-3 h-1 rounded" style={{ background: 'var(--negative)' }} /> Negative Impact
+              </span>
+            </div>
           </div>
-        )}
-      </div>
+        </section>
 
-      <footer className="mt-auto border-t px-6 py-4 text-center text-xs"
-        style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
-        Built by{" "}
-        <a href="https://br.linkedin.com/in/andrepinheiropaes" className="underline hover:opacity-70"
-          target="_blank" rel="noreferrer">André Pinheiro Paes</a>
-        {" · "}
-        <a href="https://github.com/deerws/ChainScore" className="underline hover:opacity-70"
-          target="_blank" rel="noreferrer">Open source on GitHub</a>
-      </footer>
+        {/* ── PROTOCOL EXPOSURE + ACTIVITY HEATMAP ────────────────────── */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+          {/* Protocol Exposure Table */}
+          <div className="lg:col-span-2 border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-sm font-medium mb-4">Protocol Exposure</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full data-table">
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th className="text-left py-2 pr-4">Protocol</th>
+                    <th className="text-right py-2 px-4">Exposure</th>
+                    <th className="text-right py-2 px-4">Net Usage</th>
+                    <th className="text-right py-2 pl-4">Risk Signal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {PROTOCOL_EXPOSURE.map((row, i) => (
+                    <tr key={i} style={{ borderBottom: i < PROTOCOL_EXPOSURE.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <td className="py-2.5 pr-4">
+                        <span className="font-medium">{row.protocol}</span>
+                      </td>
+                      <td className="text-right py-2.5 px-4 font-mono">{row.exposure}</td>
+                      <td className="text-right py-2.5 px-4 font-mono" style={{ color: row.netUsage.startsWith("+") ? "var(--positive)" : "var(--negative)" }}>
+                        {row.netUsage}
+                      </td>
+                      <td className="text-right py-2.5 pl-4">
+                        <span 
+                          className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded"
+                          style={{ 
+                            backgroundColor: row.riskSignal === "Low" ? "rgba(22, 101, 52, 0.15)" : "rgba(217, 119, 6, 0.15)",
+                            color: row.riskSignal === "Low" ? "var(--positive)" : "var(--warning)"
+                          }}
+                        >
+                          {row.riskSignal}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Activity Heatmap */}
+          <div className="border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-sm font-medium mb-1">Activity Heatmap</h2>
+            <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>Last 90 days</p>
+            <ActivityHeatmap />
+            <div className="flex items-center gap-2 mt-4 text-[10px]" style={{ color: 'var(--muted)' }}>
+              <span>Less</span>
+              <div className="flex gap-0.5">
+                {[0.3, 0.4, 0.6, 0.8, 1].map((o, i) => (
+                  <div key={i} className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--primary)', opacity: o }} />
+                ))}
+              </div>
+              <span>More</span>
+            </div>
+          </div>
+        </section>
+
+        {/* ── TRANSACTION HISTORY CHART ───────────────────────────────── */}
+        <section className="mb-10">
+          <div className="border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-sm font-medium mb-1">Transaction History</h2>
+            <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>Monthly transaction count (12 months)</p>
+            <TransactionChart />
+          </div>
+        </section>
+
+        {/* ── RISK ASSESSMENT ─────────────────────────────────────────── */}
+        <section className="mb-10">
+          <div className="border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-sm font-medium mb-4">Risk Assessment</h2>
+            <div className="max-w-3xl">
+              <p className="leading-relaxed mb-4">
+                This wallet demonstrates strong overall creditworthiness with a low probability of default. 
+                The subject maintains disciplined leverage management across major DeFi protocols, with a 
+                repayment-to-borrow ratio significantly above market average. Historical behavior suggests 
+                institutional-grade risk awareness and capital efficiency.
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full mt-2 shrink-0" style={{ background: 'var(--positive)' }} />
+                  <p className="text-sm"><strong>Strong repayment behavior</strong> — Consistent debt servicing across all active positions</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full mt-2 shrink-0" style={{ background: 'var(--positive)' }} />
+                  <p className="text-sm"><strong>Healthy on-chain history</strong> — Extended wallet age with diversified protocol usage</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full mt-2 shrink-0" style={{ background: 'var(--warning)' }} />
+                  <p className="text-sm"><strong>Monitor short-term activity spike</strong> — Recent transaction volume elevated vs. baseline</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── RECENT ACTIVITY TABLE ───────────────────────────────────── */}
+        <section className="mb-10">
+          <div className="border p-6 rounded card-shadow" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+            <h2 className="text-sm font-medium mb-4">Recent Activity</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full data-table">
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th className="text-left py-2 pr-4">Date</th>
+                    <th className="text-left py-2 px-4">Protocol</th>
+                    <th className="text-left py-2 px-4">Type</th>
+                    <th className="text-right py-2 px-4">Amount</th>
+                    <th className="text-right py-2 pl-4">USD Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {RECENT_TRANSACTIONS.map((tx, i) => (
+                    <tr key={i} style={{ borderBottom: i < RECENT_TRANSACTIONS.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                      <td className="py-2.5 pr-4 font-mono" style={{ color: 'var(--muted)' }}>{tx.date}</td>
+                      <td className="py-2.5 px-4 font-medium">{tx.protocol}</td>
+                      <td className="py-2.5 px-4">
+                        <span 
+                          className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded"
+                          style={{ 
+                            backgroundColor: tx.type === "Repay" ? "rgba(22, 101, 52, 0.15)" : tx.type === "Borrow" ? "rgba(185, 28, 28, 0.15)" : "var(--border)",
+                            color: tx.type === "Repay" ? "var(--positive)" : tx.type === "Borrow" ? "var(--negative)" : "var(--muted)"
+                          }}
+                        >
+                          {tx.type}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-4 text-right font-mono">{tx.amount}</td>
+                      <td className="py-2.5 pl-4 text-right font-mono" style={{ color: 'var(--muted)' }}>{tx.usd}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {/* ── FOOTER ──────────────────────────────────────────────────── */}
+        <footer className="border-t pt-6 mt-10" style={{ borderColor: 'var(--border)' }}>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs" style={{ color: 'var(--muted)' }}>
+            <div>
+              <p className="font-medium mb-1" style={{ color: 'var(--foreground)' }}>ChainScore</p>
+              <p>Institutional-grade on-chain credit intelligence</p>
+            </div>
+            <div className="flex gap-6">
+              <a href="https://github.com/deerws/ChainScore" className="hover:opacity-70 transition-opacity">GitHub</a>
+              <a href="https://br.linkedin.com/in/andrepinheiropaes" className="hover:opacity-70 transition-opacity">@andrepinheiropaes</a>
+            </div>
+          </div>
+          <p className="text-[10px] mt-4 uppercase tracking-wider" style={{ color: 'var(--muted)' }}>
+            For informational purposes only. Not financial advice.
+          </p>
+        </footer>
+      </div>
     </main>
   );
 }

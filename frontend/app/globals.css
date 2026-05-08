@@ -2,26 +2,174 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-:root {
-  --bg:      #f8fafc;
-  --card:    #ffffff;
-  --border:  #e2e8f0;
-  --fg:      #0f172a;
-  --muted:   #64748b;
-  --brand:   #185FA5;
+@theme inline {
+  --font-sans: 'Inter', 'Inter Fallback', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  /* Light Theme - WSJ Editorial */
+  --color-background: #FAFAF9;
+  --color-foreground: #18181B;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #18181B;
+  --color-muted: #F4F4F5;
+  --color-muted-foreground: #71717A;
+  --color-border: #E4E4E7;
+  --color-border-subtle: #F4F4F5;
+  --color-accent: #F4F4F5;
+  --color-accent-foreground: #18181B;
+  
+  /* Primary - Institutional Blue */
+  --color-primary: #1E3A5F;
+  --color-primary-foreground: #FFFFFF;
+  
+  /* Semantic colors */
+  --color-positive: #166534;
+  --color-negative: #991B1B;
+  --color-warning: #B45309;
+  --color-info: #1E3A5F;
+  
+  --radius: 0.25rem;
 }
 
+/* Light mode variables */
+:root {
+  --background: #FAFAF9;
+  --foreground: #18181B;
+  --card: #FFFFFF;
+  --card-hover: #F9FAFB;
+  --border: #E4E4E7;
+  --border-subtle: #F4F4F5;
+  --muted: #71717A;
+  --muted-foreground: #A1A1AA;
+  --primary: #1E3A5F;
+  --primary-hover: #162D4A;
+  --positive: #166534;
+  --negative: #991B1B;
+  --warning: #B45309;
+  --surface-elevated: #FFFFFF;
+}
+
+/* Dark mode variables */
 .dark {
-  --bg:      #0f172a;
-  --card:    #1e293b;
-  --border:  #334155;
-  --fg:      #f1f5f9;
-  --muted:   #94a3b8;
+  --background: #09090B;
+  --foreground: #FAFAFA;
+  --card: #18181B;
+  --card-hover: #27272A;
+  --border: #27272A;
+  --border-subtle: #3F3F46;
+  --muted: #A1A1AA;
+  --muted-foreground: #71717A;
+  --primary: #3B82F6;
+  --primary-hover: #2563EB;
+  --positive: #22C55E;
+  --negative: #EF4444;
+  --warning: #F59E0B;
+  --surface-elevated: #18181B;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  background: var(--background);
 }
 
 body {
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-  transition: background 0.2s, color 0.2s;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Minimal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Terminal-style headlines */
+.headline-serif {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Data monospace */
+.data-mono {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  letter-spacing: -0.01em;
+}
+
+/* Subtle shadow for cards */
+.card-shadow {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+}
+
+.dark .card-shadow {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+}
+
+/* Dense data table styling */
+.data-table {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.data-table th {
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+/* Institutional grid lines */
+.inst-grid {
+  background-image: linear-gradient(var(--border-subtle) 1px, transparent 1px);
+  background-size: 100% 32px;
+}
+
+/* Gauge colors */
+.gauge-excellent { fill: #166534; }
+.gauge-good { fill: #22C55E; }
+.gauge-fair { fill: #F59E0B; }
+.gauge-poor { fill: #F97316; }
+.gauge-critical { fill: #991B1B; }
+
+.dark .gauge-excellent { fill: #22C55E; }
+.dark .gauge-good { fill: #4ADE80; }
+.dark .gauge-fair { fill: #FBBF24; }
+.dark .gauge-poor { fill: #FB923C; }
+.dark .gauge-critical { fill: #EF4444; }
+
+/* Heatmap intensity */
+.heatmap-1 { background: var(--primary); opacity: 0.3; }
+.heatmap-2 { background: var(--primary); opacity: 0.5; }
+.heatmap-3 { background: var(--primary); opacity: 0.7; }
+.heatmap-4 { background: var(--primary); opacity: 1; }
+
+/* Hero bull image - blend with background */
+.hero-bull {
+  mix-blend-mode: multiply;
+}
+
+.dark .hero-bull {
+  mix-blend-mode: screen;
+  filter: invert(1);
 }
