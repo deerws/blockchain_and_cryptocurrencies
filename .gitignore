@@ -23,6 +23,7 @@ htmlcov/
 
 # Data files (too big or sensitive — regenerate via pipeline)
 data/raw/*.parquet
+data/raw/*.json
 data/raw/wallets/*.parquet
 data/processed/*.parquet
 data/labeled/*.parquet
