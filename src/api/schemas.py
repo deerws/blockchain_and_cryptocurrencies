@@ -104,6 +104,57 @@ class BatchScoreResponse(BaseModel):
     scored_at: datetime = Field(default_factory=datetime.utcnow)
 
 
+# ── Portfolio analysis ─────────────────────────────────────────────────────
+
+class PortfolioRequest(BaseModel):
+    wallet_addresses: list[str] = Field(
+        ...,
+        min_length=2,
+        max_length=100,
+        description="List of Ethereum wallet addresses to analyse as a portfolio (max 100)",
+    )
+    name: str = Field(default="Portfolio", max_length=80, description="Optional portfolio label")
+
+    @field_validator("wallet_addresses")
+    @classmethod
+    def validate_addresses(cls, addresses: list[str]) -> list[str]:
+        cleaned = []
+        for addr in addresses:
+            addr = addr.strip()
+            if not addr.startswith("0x") or len(addr) != 42:
+                raise ValueError(f"Invalid Ethereum address: {addr!r}")
+            cleaned.append(addr)
+        if len(cleaned) != len(set(a.lower() for a in cleaned)):
+            raise ValueError("Duplicate addresses are not allowed")
+        return cleaned
+
+
+class TierBreakdown(BaseModel):
+    tier: str
+    count: int
+    pct: float = Field(description="Percentage of portfolio in this tier")
+    avg_pd: float = Field(description="Average PD for wallets in this tier")
+
+
+class PortfolioStats(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
+    n_wallets: int
+    n_scored: int
+    n_failed: int
+    avg_score: float = Field(description="Portfolio average ChainScore")
+    avg_pd: float = Field(description="Portfolio average probability of default")
+    weighted_pd: float = Field(description="Equal-weighted portfolio PD")
+    var_95: float = Field(description="VaR 95%: PD at the 95th percentile wallet")
+    cvar_95: float = Field(description="CVaR 95% (Expected Shortfall): mean PD of worst 5% of wallets")
+    concentration_high_risk: float = Field(
+        description="Fraction of portfolio in 'high' or 'very_high' risk tiers"
+    )
+    tier_breakdown: list[TierBreakdown]
+    model_version: str
+    scored_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 # ── System ─────────────────────────────────────────────────────────────────
 
 class HealthResponse(BaseModel):

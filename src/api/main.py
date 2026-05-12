@@ -30,9 +30,12 @@ from src.api.schemas import (
     BatchScoreResponse,
     BatchWalletResult,
     HealthResponse,
+    PortfolioRequest,
+    PortfolioStats,
     ScoreRequest,
     ScoreResponse,
     ShapFactor,
+    TierBreakdown,
 )
 from src.data.ethereum_client import EthereumClient
 from src.models.predict import ChainScorePredictor
@@ -308,7 +311,6 @@ async def batch_score(
             await asyncio.sleep(0.5)
 
     succeeded = sum(1 for r in results if r.error is None)
-    # Grab version from the first successful result; fall back if all failed
     first_ok = next((r for r in results if r.error is None), None)
     model_version = "lgbm_v1" if first_ok is not None else "unavailable"
     return BatchScoreResponse(
@@ -317,4 +319,85 @@ async def batch_score(
         succeeded=succeeded,
         failed=len(results) - succeeded,
         model_version=model_version,
+    )
+
+
+@app.post(
+    "/v1/portfolio",
+    response_model=PortfolioStats,
+    tags=["scoring"],
+    summary="Portfolio risk aggregation",
+    description=(
+        "Score up to **100** wallets and return aggregate portfolio risk metrics: "
+        "average PD, **VaR 95%** (PD at the 95th-percentile wallet), "
+        "**CVaR 95%** (expected shortfall — mean PD of the worst 5%), "
+        "tier breakdown, and high-risk concentration. "
+        "This is the vocabulary of a credit risk desk applied to DeFi exposure."
+    ),
+)
+async def portfolio_analysis(
+    request: PortfolioRequest,
+    _: str = Depends(_check_api_key),
+) -> PortfolioStats:
+    # Score all wallets sequentially (cache helps for repeated calls)
+    results: list[BatchWalletResult] = []
+    for i, wallet in enumerate(request.wallet_addresses):
+        result = await asyncio.to_thread(_score_wallet_safe, wallet, False)
+        results.append(result)
+        if i < len(request.wallet_addresses) - 1:
+            await asyncio.sleep(0.3)
+
+    scored = [r for r in results if r.error is None and r.probability_of_default is not None]
+    failed = len(results) - len(scored)
+
+    if not scored:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No wallets could be scored successfully.",
+        )
+
+    import numpy as np
+    pds = np.array([r.probability_of_default for r in scored])
+    scores = np.array([r.score for r in scored])
+
+    # VaR and CVaR
+    var_95 = float(np.percentile(pds, 95))
+    cvar_threshold = np.percentile(pds, 95)
+    tail = pds[pds >= cvar_threshold]
+    cvar_95 = float(tail.mean()) if len(tail) > 0 else var_95
+
+    # Tier breakdown
+    tier_order = ["very_low", "low", "medium", "high", "very_high"]
+    tier_counts: dict[str, list[float]] = {t: [] for t in tier_order}
+    for r in scored:
+        if r.risk_tier in tier_counts:
+            tier_counts[r.risk_tier].append(r.probability_of_default)
+
+    tier_breakdown = [
+        TierBreakdown(
+            tier=t,
+            count=len(pds_list),
+            pct=round(len(pds_list) / len(scored) * 100, 1),
+            avg_pd=round(float(np.mean(pds_list)), 4) if pds_list else 0.0,
+        )
+        for t, pds_list in tier_counts.items()
+        if len(pds_list) > 0
+    ]
+
+    high_risk_count = sum(
+        1 for r in scored if r.risk_tier in ("high", "very_high")
+    )
+
+    return PortfolioStats(
+        n_wallets=len(results),
+        n_scored=len(scored),
+        n_failed=failed,
+        avg_score=round(float(scores.mean()), 1),
+        avg_pd=round(float(pds.mean()), 4),
+        weighted_pd=round(float(pds.mean()), 4),
+        var_95=round(var_95, 4),
+        cvar_95=round(cvar_95, 4),
+        concentration_high_risk=round(high_risk_count / len(scored), 4),
+        tier_breakdown=tier_breakdown,
+        model_version="lgbm_v1",
     )

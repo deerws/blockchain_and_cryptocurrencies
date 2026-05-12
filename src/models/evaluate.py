@@ -8,6 +8,8 @@ Metrics computed:
   - Gini coefficient (= 2 * AUC - 1)
   - Brier score (calibration)
   - Lift at decile (business impact)
+  - Average Precision / PR curve
+  - Decile hit rate (precision per score band)
 
 Plots generated (saved to reports/figures/):
   - roc_curves.png
@@ -16,6 +18,8 @@ Plots generated (saved to reports/figures/):
   - lift_chart.png
   - shap_summary.png
   - score_distribution.png
+  - precision_recall.png
+  - decile_analysis.png
 """
 from __future__ import annotations
 
@@ -32,7 +36,9 @@ import pandas as pd
 import shap
 from sklearn.calibration import calibration_curve
 from sklearn.metrics import (
+    average_precision_score,
     brier_score_loss,
+    precision_recall_curve,
     roc_auc_score,
     roc_curve,
 )
@@ -70,6 +76,31 @@ def lift_at_decile(
     base_rate = df["y"].mean()
     top_rate = df.head(top_n)["y"].mean()
     return top_rate / base_rate if base_rate > 0 else 0.0
+
+
+def decile_hit_rates(y_true: np.ndarray, y_prob: np.ndarray) -> pd.DataFrame:
+    """
+    Per-decile precision table: for each score band, what fraction
+    of wallets actually defaulted? Core backtesting metric for credit risk.
+    """
+    df = pd.DataFrame({"y": y_true, "p": y_prob})
+    df["score"] = (1000 * (1 - df["p"])).round().astype(int)
+    df["decile"] = pd.qcut(df["p"], 10, labels=False, duplicates="drop") + 1
+    base_rate = df["y"].mean()
+
+    rows = []
+    for d in sorted(df["decile"].unique()):
+        grp = df[df["decile"] == d]
+        hit = grp["y"].mean()
+        rows.append({
+            "decile": int(d),
+            "n_wallets": len(grp),
+            "n_defaults": int(grp["y"].sum()),
+            "hit_rate": round(float(hit), 4),
+            "lift": round(float(hit / base_rate) if base_rate > 0 else 0, 3),
+            "score_range": f"{grp['score'].min()}–{grp['score'].max()}",
+        })
+    return pd.DataFrame(rows)
 
 
 # ── Plot functions ─────────────────────────────────────────────────────────
@@ -227,6 +258,80 @@ def plot_shap_summary(
         logger.warning(f"SHAP plot failed: {exc}")
 
 
+def plot_precision_recall(
+    y_test: np.ndarray,
+    probs: dict[str, np.ndarray],
+    save_path: Path,
+) -> None:
+    """PR curve — more informative than ROC for imbalanced default datasets."""
+    fig, ax = plt.subplots(figsize=(7, 6))
+    colors = [BRAND_BLUE, "#E05C2A"]
+    base_rate = y_test.mean()
+
+    for (name, prob), color in zip(probs.items(), colors):
+        precision, recall, _ = precision_recall_curve(y_test, prob)
+        ap = average_precision_score(y_test, prob)
+        ax.plot(recall, precision, lw=2, color=color, label=f"{name} (AP = {ap:.3f})")
+
+    ax.axhline(base_rate, color="black", lw=1, ls="--", alpha=0.5,
+               label=f"Baseline (prevalence = {base_rate:.2%})")
+    ax.set_xlabel("Recall")
+    ax.set_ylabel("Precision")
+    ax.set_title("Precision-Recall Curve — ChainScore Models")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    logger.info(f"Saved: {save_path}")
+
+
+def plot_decile_analysis(
+    y_test: np.ndarray,
+    y_prob: np.ndarray,
+    model_name: str,
+    save_path: Path,
+) -> None:
+    """
+    Bar chart: actual default rate (hit rate) per score decile.
+    Decile 1 = highest predicted risk, Decile 10 = lowest predicted risk.
+    A good model should show monotonically decreasing hit rate.
+    """
+    table = decile_hit_rates(y_test, y_prob)
+    base_rate = y_test.mean()
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    bars = ax.bar(
+        table["decile"],
+        table["hit_rate"],
+        color=[BRAND_BLUE if d <= 3 else "#2ABD6E" for d in table["decile"]],
+        alpha=0.85,
+        width=0.7,
+    )
+    ax.axhline(base_rate, color="#E05C2A", lw=1.5, ls="--",
+               label=f"Overall default rate ({base_rate:.1%})")
+
+    for bar, row in zip(bars, table.itertuples()):
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.005,
+            f"{row.hit_rate:.1%}",
+            ha="center", va="bottom", fontsize=8,
+        )
+
+    ax.set_xlabel("Decile (1 = highest predicted risk, 10 = lowest)")
+    ax.set_ylabel("Actual Default Rate (Hit Rate)")
+    ax.set_title(f"Decile Hit Rate — {model_name}\n"
+                 "How many wallets in each predicted risk band actually defaulted?")
+    ax.set_xticks(table["decile"])
+    ax.legend()
+    ax.grid(True, alpha=0.3, axis="y")
+    fig.tight_layout()
+    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    logger.info(f"Saved: {save_path}")
+
+
 def plot_score_distribution(
     y_test: np.ndarray,
     y_prob: np.ndarray,
@@ -302,12 +407,23 @@ def run_evaluation(
             "ks_statistic": float(ks_statistic(y_test_np, prob)),
             "gini": float(gini_coefficient(y_test_np, prob)),
             "brier_score": float(brier_score_loss(y_test_np, prob)),
+            "average_precision": float(average_precision_score(y_test_np, prob)),
             "lift_decile_1": float(lift_at_decile(y_test_np, prob, 1)),
             "lift_decile_2": float(lift_at_decile(y_test_np, prob, 2)),
         }
         logger.info(f"\n{'='*40}\n{name}")
         for metric, val in results[name].items():
             logger.info(f"  {metric}: {val:.4f}")
+
+    # ── Backtesting: decile hit rate table ─────────────────────────────────
+    lgb_decile = decile_hit_rates(y_test_np, lgb_prob)
+    lr_decile = decile_hit_rates(y_test_np, lr_prob)
+    logger.info("\nLightGBM Decile Hit Rates:\n" + lgb_decile.to_string(index=False))
+    with (reports_dir / "decile_analysis.json").open("w") as f:
+        json.dump({
+            "LightGBM": lgb_decile.to_dict(orient="records"),
+            "Logistic Regression": lr_decile.to_dict(orient="records"),
+        }, f, indent=2)
 
     # ── Generate plots ─────────────────────────────────────────────────────
     plot_roc_curves(y_test_np, probs, reports_dir / "roc_curves.png")
@@ -316,6 +432,8 @@ def run_evaluation(
     plot_lift(y_test_np, probs, reports_dir / "lift_chart.png")
     plot_score_distribution(y_test_np, lgb_prob, reports_dir / "score_distribution.png")
     plot_shap_summary(lgb_model, X_test_df, reports_dir / "shap_summary.png")
+    plot_precision_recall(y_test_np, probs, reports_dir / "precision_recall.png")
+    plot_decile_analysis(y_test_np, lgb_prob, "LightGBM", reports_dir / "decile_analysis.png")
 
     # Save results JSON
     with (reports_dir / "evaluation_results.json").open("w") as f:
