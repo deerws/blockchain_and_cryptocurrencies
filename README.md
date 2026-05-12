@@ -259,6 +259,40 @@ Requires the API running on `http://localhost:8000`.
 
 ---
 
+## API endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Service status + cache stats |
+| `POST` | `/v1/score` | Score a single wallet (SHAP included) |
+| `GET` | `/v1/score/{address}` | Same via GET for quick browser tests |
+| `POST` | `/v1/batch` | Score up to 20 wallets in one call |
+| `POST` | `/v1/portfolio` | Aggregate risk for up to 100 wallets |
+
+**Portfolio response** returns credit-desk vocabulary: average PD, **VaR 95%** (PD at the 95th-percentile wallet), **CVaR 95% / Expected Shortfall** (mean PD of the worst 5%), tier breakdown, and high-risk concentration ratio.
+
+```bash
+curl -s -X POST http://localhost:8000/v1/portfolio \
+  -H "Content-Type: application/json" \
+  -d '{"wallet_addresses": ["0xabc...", "0xdef...", "0x123..."], "name": "Treasury exposure"}'
+```
+
+All endpoints are documented in Swagger UI at `http://localhost:8000/docs`. Repeated calls for the same wallet are served from a **30-min in-memory cache** (~50ms on cache hits, zero Etherscan requests).
+
+---
+
+## Backtesting
+
+Beyond standard metrics, the evaluation suite includes two backtesting analyses:
+
+**Decile hit rate** — wallets are ranked by predicted risk and split into 10 bands. For each band, we measure what fraction actually defaulted. A model with real discrimination shows monotonically decreasing hit rates from decile 1 (highest predicted risk) to decile 10.
+
+**Precision-Recall curve** — more informative than ROC for imbalanced datasets. The default rate in DeFi lending is low, so PR curves reveal whether the model is genuinely useful at high-precision operating points, not just good at ranking.
+
+Both plots are generated automatically by `python -m src.models.evaluate` and saved to `reports/figures/`.
+
+---
+
 ## Tech stack
 
 | Layer | Tools |
@@ -286,8 +320,9 @@ bool valid = anchor.verifyScore(wallet, score, validUntil, modelVersion);
 - [x] **Phase 0** — Project scaffolding and repository structure
 - [x] **Phase 1** — Data engineering: 49,748 liquidation events, 15,809 labeled wallets
 - [x] **Phase 2** — Modeling: 45 features, LR + LightGBM, KS/Gini/AUC/SHAP evaluation
-- [x] **Phase 3** — REST API (single + batch scoring, Swagger); Next.js dashboard with dark mode, gauge, SHAP chart, analyst insights
-- [ ] **Phase 4** — Scale to 15,809 wallets and retrain — target ROC-AUC ≥ 0.72 *(indexing in progress)*
+- [x] **Phase 3** — REST API (single + batch + portfolio scoring, Swagger, 30-min cache); Next.js institutional dashboard
+- [x] **Phase 3.5** — Backtesting suite: PR curve, decile hit rate analysis, CVaR/VaR portfolio metrics
+- [ ] **Phase 4** — Scale to 15,809 wallets and retrain — target ROC-AUC ≥ 0.72 *(indexing in progress — 77%)*
 - [ ] **Phase 5** — Deploy API + anchor scores on Sepolia testnet
 
 ---
