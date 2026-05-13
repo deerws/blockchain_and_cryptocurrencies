@@ -45,10 +45,10 @@
     "block_span"
   ],
   "temporal_split_block": 17000000,
-  "train_size": 239,
-  "test_size": 60,
-  "train_default_rate": 0.497907949790795,
-  "test_default_rate": 0.5,
-  "lr_roc_auc": 0.6133333333333334,
-  "lgb_roc_auc": 0.5877777777777777
+  "train_size": 8595,
+  "test_size": 205,
+  "train_default_rate": 0.6172193135543921,
+  "test_default_rate": 0.47317073170731705,
+  "lr_roc_auc": 0.6712485681557847,
+  "lgb_roc_auc": 0.6541618938526155
 }

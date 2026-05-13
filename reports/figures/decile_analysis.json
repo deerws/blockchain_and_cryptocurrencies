@@ -1,0 +1,166 @@
+{
+  "LightGBM": [
+    {
+      "decile": 1,
+      "n_wallets": 21,
+      "n_defaults": 6,
+      "hit_rate": 0.2857,
+      "lift": 0.604,
+      "score_range": "612\u2013705"
+    },
+    {
+      "decile": 2,
+      "n_wallets": 20,
+      "n_defaults": 3,
+      "hit_rate": 0.15,
+      "lift": 0.317,
+      "score_range": "559\u2013610"
+    },
+    {
+      "decile": 3,
+      "n_wallets": 21,
+      "n_defaults": 11,
+      "hit_rate": 0.5238,
+      "lift": 1.107,
+      "score_range": "487\u2013555"
+    },
+    {
+      "decile": 4,
+      "n_wallets": 20,
+      "n_defaults": 10,
+      "hit_rate": 0.5,
+      "lift": 1.057,
+      "score_range": "454\u2013484"
+    },
+    {
+      "decile": 5,
+      "n_wallets": 21,
+      "n_defaults": 8,
+      "hit_rate": 0.381,
+      "lift": 0.805,
+      "score_range": "403\u2013450"
+    },
+    {
+      "decile": 6,
+      "n_wallets": 20,
+      "n_defaults": 9,
+      "hit_rate": 0.45,
+      "lift": 0.951,
+      "score_range": "363\u2013402"
+    },
+    {
+      "decile": 7,
+      "n_wallets": 20,
+      "n_defaults": 10,
+      "hit_rate": 0.5,
+      "lift": 1.057,
+      "score_range": "309\u2013357"
+    },
+    {
+      "decile": 8,
+      "n_wallets": 21,
+      "n_defaults": 13,
+      "hit_rate": 0.619,
+      "lift": 1.308,
+      "score_range": "258\u2013305"
+    },
+    {
+      "decile": 9,
+      "n_wallets": 20,
+      "n_defaults": 14,
+      "hit_rate": 0.7,
+      "lift": 1.479,
+      "score_range": "222\u2013257"
+    },
+    {
+      "decile": 10,
+      "n_wallets": 21,
+      "n_defaults": 13,
+      "hit_rate": 0.619,
+      "lift": 1.308,
+      "score_range": "151\u2013220"
+    }
+  ],
+  "Logistic Regression": [
+    {
+      "decile": 1,
+      "n_wallets": 21,
+      "n_defaults": 9,
+      "hit_rate": 0.4286,
+      "lift": 0.906,
+      "score_range": "476\u2013832"
+    },
+    {
+      "decile": 2,
+      "n_wallets": 20,
+      "n_defaults": 6,
+      "hit_rate": 0.3,
+      "lift": 0.634,
+      "score_range": "444\u2013473"
+    },
+    {
+      "decile": 3,
+      "n_wallets": 21,
+      "n_defaults": 3,
+      "hit_rate": 0.1429,
+      "lift": 0.302,
+      "score_range": "428\u2013443"
+    },
+    {
+      "decile": 4,
+      "n_wallets": 20,
+      "n_defaults": 7,
+      "hit_rate": 0.35,
+      "lift": 0.74,
+      "score_range": "412\u2013428"
+    },
+    {
+      "decile": 5,
+      "n_wallets": 21,
+      "n_defaults": 7,
+      "hit_rate": 0.3333,
+      "lift": 0.704,
+      "score_range": "397\u2013412"
+    },
+    {
+      "decile": 6,
+      "n_wallets": 20,
+      "n_defaults": 12,
+      "hit_rate": 0.6,
+      "lift": 1.268,
+      "score_range": "381\u2013397"
+    },
+    {
+      "decile": 7,
+      "n_wallets": 20,
+      "n_defaults": 14,
+      "hit_rate": 0.7,
+      "lift": 1.479,
+      "score_range": "358\u2013380"
+    },
+    {
+      "decile": 8,
+      "n_wallets": 21,
+      "n_defaults": 10,
+      "hit_rate": 0.4762,
+      "lift": 1.006,
+      "score_range": "327\u2013356"
+    },
+    {
+      "decile": 9,
+      "n_wallets": 20,
+      "n_defaults": 12,
+      "hit_rate": 0.6,
+      "lift": 1.268,
+      "score_range": "290\u2013327"
+    },
+    {
+      "decile": 10,
+      "n_wallets": 21,
+      "n_defaults": 17,
+      "hit_rate": 0.8095,
+      "lift": 1.711,
+      "score_range": "176\u2013289"
+    }
+  ]
+}

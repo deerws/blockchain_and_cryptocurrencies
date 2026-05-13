@@ -79,7 +79,7 @@ Logistic Regression continues to lead on rank-ordering metrics (AUC, KS, Gini), 
 
 ## Methodology
 
-### Feature engineering — 47 features across 5 families
+### Feature engineering — 43 features across 5 families
 
 | Family | Count | What it captures |
 |---|:---:|---|
@@ -134,7 +134,7 @@ ChainScore/
 │   │   ├── cohort_collector.py     Non-default borrower sampler
 │   │   └── wallet_indexer.py       Transaction history indexer with checkpointing
 │   ├── features/
-│   │   ├── builder.py              47-feature pipeline
+│   │   ├── builder.py              43-feature pipeline
 │   │   └── protocol_registry.py    Known DeFi contract addresses
 │   ├── models/
 │   │   ├── train.py                Training pipeline (LR + LightGBM, calibration)
