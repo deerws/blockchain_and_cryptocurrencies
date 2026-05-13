@@ -55,32 +55,19 @@ Institutional-style analyst interface built with Next.js — dark/light mode, li
 
 ## Model performance
 
-### Current results — 299-wallet MVP dataset
+### Results — 8,800-wallet dataset
 
 | Metric | Logistic Regression | LightGBM |
 |---|:---:|:---:|
-| **ROC-AUC** | **0.613** | 0.588 |
-| **KS Statistic** | **0.300** | 0.233 |
-| **Gini Coefficient** | **0.227** | 0.176 |
-| Brier Score | 0.264 | **0.249** |
-| Lift @ Decile 2 | **1.33×** | 1.17×  |
+| **ROC-AUC** | **0.671** | 0.654 |
+| **KS Statistic** | **0.328** | 0.260 |
+| **Gini Coefficient** | **0.343** | 0.308 |
+| Brier Score | 0.253 | **0.245** |
+| Lift @ Decile 1 | **1.69×** | 1.37× |
 
-Logistic Regression outperforms LightGBM at this sample size — a well-documented pattern in credit risk: gradient boosting requires ≥ 1,000 labeled samples to surpass linear models. A KS Statistic of 0.30 represents meaningful separation for a prototype with no hyperparameter tuning.
-
-### Expected results — 15,809-wallet full dataset *(in progress)*
-
-| Metric | Expected range | Basis |
-|---|---|---|
-| ROC-AUC | 0.70 – 0.78 | Credit risk literature: LightGBM gains ~0.10–0.15 AUC from 300 → 15k samples |
-| KS Statistic | 0.35 – 0.45 | Industry benchmark for scorecard-grade separation |
-| Gini Coefficient | 0.40 – 0.55 | Typical for consumer credit models at this feature richness |
-| Lift @ Decile 2 | 1.7 – 2.2× | Consistent with DeFi risk studies at 10k+ samples |
-
-These projections are grounded in credit risk literature and DeFi-specific research (Aave V2 liquidation pattern studies). The dataset scaling is currently in progress — model artifacts will be updated once the full training run completes.
+Logistic Regression continues to lead on rank-ordering metrics (AUC, KS, Gini), while LightGBM edges it on calibration (Brier score) — consistent with credit risk literature. A KS Statistic of 0.33 crosses the threshold for scorecard-grade separation without any hyperparameter tuning. Dataset: 8,800 wallets with transaction history (5,402 defaulted, 3,398 non-default), indexed from 15,809 labeled wallets.
 
 ### Evaluation plots
-
-Generated on the 299-wallet dataset. Full-dataset plots will replace these after retraining.
 
 | | |
 |---|---|
@@ -92,7 +79,7 @@ Generated on the 299-wallet dataset. Full-dataset plots will replace these after
 
 ## Methodology
 
-### Feature engineering — 45 features across 5 families
+### Feature engineering — 47 features across 5 families
 
 | Family | Count | What it captures |
 |---|:---:|---|
@@ -147,7 +134,7 @@ ChainScore/
 │   │   ├── cohort_collector.py     Non-default borrower sampler
 │   │   └── wallet_indexer.py       Transaction history indexer with checkpointing
 │   ├── features/
-│   │   ├── builder.py              45-feature pipeline
+│   │   ├── builder.py              47-feature pipeline
 │   │   └── protocol_registry.py    Known DeFi contract addresses
 │   ├── models/
 │   │   ├── train.py                Training pipeline (LR + LightGBM, calibration)
@@ -322,14 +309,14 @@ bool valid = anchor.verifyScore(wallet, score, validUntil, modelVersion);
 - [x] **Phase 2** — Modeling: 45 features, LR + LightGBM, KS/Gini/AUC/SHAP evaluation
 - [x] **Phase 3** — REST API (single + batch + portfolio scoring, Swagger, 30-min cache); Next.js institutional dashboard
 - [x] **Phase 3.5** — Backtesting suite: PR curve, decile hit rate analysis, CVaR/VaR portfolio metrics
-- [ ] **Phase 4** — Scale to 15,809 wallets and retrain — target ROC-AUC ≥ 0.72 *(indexing in progress — 77%)*
+- [x] **Phase 4** — Scale to 8,800 wallets with transaction data and retrain — LR ROC-AUC 0.671, KS 0.328, Gini 0.343
 - [ ] **Phase 5** — Deploy API + anchor scores on Sepolia testnet
 
 ---
 
 ## About
 
-I've been interested in both credit risk and crypto for a while, and at some point the question became obvious: Aave borrowers have a full repayment history sitting on a public ledger — why isn't anyone turning that into a credit score? ChainScore is my attempt to answer that. The methodology is standard scorecard work (feature engineering, gradient boosting, Platt calibration, KS/Gini evaluation) applied to on-chain data instead of bank statements. The answer, even at small scale, is yes: a KS Statistic of 0.30 with no hyperparameter tuning and 299 training samples is a solid foundation.
+I've been interested in both credit risk and crypto for a while, and at some point the question became obvious: Aave borrowers have a full repayment history sitting on a public ledger — why isn't anyone turning that into a credit score? ChainScore is my attempt to answer that. The methodology is standard scorecard work (feature engineering, gradient boosting, Platt calibration, KS/Gini evaluation) applied to on-chain data instead of bank statements. The answer is yes: a KS Statistic of 0.33 and Gini of 0.34 with no hyperparameter tuning and 8,800 training samples puts this squarely in scorecard-grade territory.
 
 **André Pinheiro Paes** — Computer Science student at UFSC, interested in credit risk, financial markets, and AI.
 
